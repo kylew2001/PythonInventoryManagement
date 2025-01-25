@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Customer Account</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .submit-btn:hover {
+            background-color: #45a049;
+        }
+
+        .submit-btn:active {
+            background-color: #3e8e41;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-container label {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+    </style>
+    <script src="/static/scripts.js" defer></script>
+</head>
+<body>
+    {% include 'menu.html' %}
+
+    <main class="container">
+        <h1>Edit Your Account</h1>
+
+        <form id="editCustomerForm">
+            <div class="form-group">
+                <label for="clinic_name">Clinic Name:</label>
+                <input type="text" id="clinic_name" name="clinic_name" required>
+            </div>
+            <div class="form-group">
+                <label for="clinic_address">Clinic Address:</label>
+                <input type="text" id="clinic_address" name="clinic_address" required>
+            </div>
+            <div class="form-group">
+                <label for="clinic_category">Clinic Category:</label>
+                <select id="clinic_category" name="clinic_category" required>
+                    <option value="null">Select Category</option>
+                    <option value="Van">Van</option>
+                    <option value="9:30">9:30</option>
+                    <option value="11:30">11:30</option>
+                    <option value="1:30">1:30</option>
+                    <option value="3:30">3:30</option>
+                    <option value="5:30">5:30</option>
+                    <option value="Misc">Misc</option>
+                    <option value="On hold">On hold</option>
+                    <option value="Pick-up">Pick-up</option>
+                </select>
+            </div>
+            <label for="preferred_carrier">Preferred Carrier:</label>
+<select name="preferred_carrier" id="preferred_carrier" required>
+    <option value="" disabled selected>Select a carrier</option>
+    {% for carrier in carriers %}
+        <option value="{{ carrier['name'] }}">
+            {{ carrier['name'] }}
+            {% if customer %}({{ customer['preferred_carrier'] }}){% endif %}
+        </option>
+
+    {% endfor %}
+</select>
+
+
+            <div class="form-group">
+                <label for="clinic_password">Password:</label>
+                <input type="password" id="clinic_password" name="clinic_password" placeholder="Leave blank to keep current password">
+            </div>
+            <div class="form-group checkbox-container">
+                <input type="checkbox" id="priority_customer" name="priority_customer">
+                <label for="priority_customer">Priority Customer</label>
+            </div>
+            <button type="button" class="submit-btn" onclick="submitEditForm()">Save Changes</button>
+        </form>
+    </main>
+
+    <script>
+        // Fetch and prefill customer details
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('/get_customer_details')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(data.error);
+                        return;
+                    }
+                    document.getElementById('clinic_name').value = data.clinic_name;
+                    document.getElementById('clinic_address').value = data.clinic_address;
+                    document.getElementById('clinic_category').value = data.clinic_category;
+                    document.getElementById('priority_customer').checked = data.priority_customer;
+                })
+                .catch(error => console.error('Error fetching customer details:', error));
+        });
+
+        // Submit edited form data
+        function submitEditForm() {
+            const formData = {
+                clinic_name: document.getElementById('clinic_name').value,
+                clinic_address: document.getElementById('clinic_address').value,
+                clinic_category: document.getElementById('clinic_category').value,
+                clinic_password: document.getElementById('clinic_password').value,
+                priority_customer: document.getElementById('priority_customer').checked
+            };
+
+            fetch('/edit_customer_account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    window.location.href = '/customer_menu';
+                } else {
+                    alert(data.error || 'Failed to update account.');
+                }
+            })
+            .catch(error => console.error('Error updating customer account:', error));
+        }
+    </script>
+</body>
+</html>

@@ -138,7 +138,14 @@ def inject_logged_in_user():
         conn.close()
         if user:
             user_name = user["full_name"]
+    elif "customer_id" in session:
+        conn = get_db_connection()
+        customer = conn.execute("SELECT clinic_name FROM customer_account WHERE id = ?", (session["customer_id"],)).fetchone()
+        conn.close()
+        if customer:
+            user_name = customer["clinic_name"]
     return {"logged_in_user": user_name}
+
 
 @app.context_processor
 def inject_user_role():
@@ -169,9 +176,23 @@ def dashboard():
         return redirect(url_for("login"))
 
     conn = get_db_connection()
-    orders = conn.execute("SELECT * FROM orders").fetchall()
+    orders = conn.execute("""
+        SELECT 
+            o.*,
+            ca.priority_customer,
+            DATETIME(o.finalized_time, '+3 hours') > DATETIME('now') AS is_new,
+            o.finalized_by
+        FROM orders o
+        LEFT JOIN customer_account ca 
+        ON o.clinic_name = ca.clinic_name
+        WHERE o.order_confirmed = 'Confirmed'
+        ORDER BY o.finalized_time DESC
+    """).fetchall()
     conn.close()
-    return render_template("dashboard.html", orders=orders)
+
+    return render_template("dashboard.html", orders=[dict(order) for order in orders])
+
+
 
 #endregion
 
@@ -484,10 +505,31 @@ def add_entry():
 
 
 # Route: Fetch Order Details for Modal
-@app.route('/order_items/<int:order_id>', methods=['GET'])
+@app.route('/get_order_items/<int:order_id>', methods=['GET'])
 def get_order_items(order_id):
     conn = get_db_connection()
-    order = conn.execute('SELECT * FROM orders WHERE order_id = ?', (order_id,)).fetchone()
+
+    # Fetch order details
+    order = conn.execute("""
+        SELECT o.*, 
+               c.priority_customer 
+        FROM orders o
+        LEFT JOIN customer_account c 
+        ON o.clinic_name = c.clinic_name
+        WHERE o.order_id = ?
+    """, (order_id,)).fetchone()
+
+    # Fetch items in the order
+    items = conn.execute("""
+        SELECT oi.item_name AS name, 
+               oi.quantity, 
+               p.price 
+        FROM order_items oi
+        LEFT JOIN products p 
+        ON oi.item_name = p.product_name
+        WHERE oi.order_id = ?
+    """, (order_id,)).fetchall()
+
     conn.close()
 
     if not order:
@@ -502,8 +544,10 @@ def get_order_items(order_id):
         "carrier": order["carrier"],
         "category": order["category"],
         "status": order["status"],
-        "description": order["description"] or "No description provided"
+        "priority_customer": bool(order["priority_customer"]),
+        "items": [dict(item) for item in items]
     })
+
 
 # Route: Update Order Status
 @app.route('/update_order_status', methods=['POST'])
@@ -923,7 +967,6 @@ print(app.url_map)
 #endregion for
 
 #region Customer Accounts
-
 @app.route("/create_customer_account", methods=["GET", "POST"])
 def create_customer_account():
     if request.method == "POST":
@@ -932,15 +975,17 @@ def create_customer_account():
         clinic_username = request.form["clinic_username"]
         clinic_password = request.form["clinic_password"]
         clinic_category = request.form["clinic_category"]
+        preferred_carrier = request.form.get("preferred_carrier")  # Capture preferred carrier
 
         hashed_password = generate_password_hash(clinic_password)
 
         conn = get_db_connection()
         try:
-            conn.execute(
-                "INSERT INTO customer_account (clinic_name, clinic_address, clinic_username, clinic_password, clinic_category) VALUES (?, ?, ?, ?, ?)",
-                (clinic_name, clinic_address, clinic_username, hashed_password, clinic_category),
-            )
+            conn.execute("""
+                INSERT INTO customer_account (
+                    clinic_name, clinic_address, clinic_username, clinic_password, clinic_category, preferred_carrier
+                ) VALUES (?, ?, ?, ?, ?, ?)
+            """, (clinic_name, clinic_address, clinic_username, hashed_password, clinic_category, preferred_carrier))
             conn.commit()
             flash("Customer account created successfully!", "success")
             return redirect(url_for("customer_login"))
@@ -949,7 +994,11 @@ def create_customer_account():
         finally:
             conn.close()
 
-    return render_template("create_customer_account.html")
+    conn = get_db_connection()
+    carriers = conn.execute("SELECT name FROM carriers").fetchall()  # Fetch carriers
+    conn.close()
+
+    return render_template("create_customer_account.html", carriers=carriers)
 
 
 #endregion
@@ -1102,6 +1151,224 @@ def update_stock(product_id):
         if 'UNIQUE constraint failed' in str(e):
             return jsonify({'success': False, 'error': 'Duplicate value detected for Stock Location or Barcode.'})
         return jsonify({'success': False, 'error': 'Database error occurred.'})
+
+
+#endregion
+
+#region Customer Ordering
+
+@app.route("/customer_ordering", methods=["GET"])
+def customer_ordering():
+    if "customer_id" not in session or session.get("user_role") != "customer":
+        flash("You need to log in as a customer to access this page.", "danger")
+        return redirect(url_for("customer_login"))
+    return render_template("customer_ordering.html")
+
+
+# Search for products
+@app.route('/search_products', methods=['GET'])
+def search_products():
+    query = request.args.get('query', '').strip()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Use SQL LIKE query to find products matching the search
+    cursor.execute("SELECT product_id, product_name, price FROM products WHERE product_name LIKE ?", (f"%{query}%",))
+    products = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return jsonify(products)
+
+
+# Add item to cart
+@app.route('/add_to_cart', methods=['POST'])
+def add_to_cart():
+    data = request.json
+    product_id = data['product_id']
+    quantity = int(data['quantity'])
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    product = cursor.execute("SELECT product_name, price FROM products WHERE product_id = ?", (product_id,)).fetchone()
+    conn.close()
+
+    if product:
+        product_name, price = product
+        item = {
+            "product_id": product_id,
+            "product_name": product_name,
+            "quantity": quantity,
+            "price": price,
+            "total_price": price * quantity
+        }
+        return jsonify(item)
+    return jsonify({"error": "Product not found"}), 404
+
+# Submit order
+@app.route('/submit_order', methods=['POST'])
+def submit_order():
+    data = request.json
+    clinic_id = session.get('customer_id')
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    clinic = cursor.execute("SELECT clinic_name, clinic_address, preferred_carrier FROM customer_account WHERE id = ?", (clinic_id,)).fetchone()
+    if not clinic:
+        return jsonify({"error": "Customer account not found"}), 404
+
+    clinic_name, clinic_address, preferred_carrier = clinic
+    cart = data['cart']
+
+    total_quantity = sum(item['quantity'] for item in cart)
+    lines = len(cart)
+
+    cursor.execute("""
+        INSERT INTO orders (clinic_name, clinic_address, category, status, quantity, lines, finalized_time, order_confirmed, carrier)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (clinic_name, clinic_address, "new", "Pending", total_quantity, lines, datetime.now(), "Pending", preferred_carrier))
+
+    order_id = cursor.lastrowid
+    for item in cart:
+        cursor.execute("""
+            INSERT INTO order_items (order_id, item_name, quantity)
+            VALUES (?, ?, ?)
+        """, (order_id, item['productName'], item['quantity']))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": "Order submitted successfully!", "order_id": order_id})
+
+
+#endregion
+
+#region Edit Customer Account
+
+@app.route('/get_customer_details', methods=['GET'])
+def get_customer_details():
+    if "customer_id" not in session:
+        return jsonify({"error": "You need to log in to access this page."}), 403
+
+    customer_id = session['customer_id']
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    customer = cursor.execute("""
+        SELECT clinic_name, clinic_address, clinic_category, priority_customer 
+        FROM customer_account 
+        WHERE id = ?
+    """, (customer_id,)).fetchone()
+
+    conn.close()
+
+    if customer:
+        return jsonify({
+            "clinic_name": customer[0],
+            "clinic_address": customer[1],
+            "clinic_category": customer[2],
+            "priority_customer": bool(customer[3])  # Convert to boolean
+        })
+    return jsonify({"error": "Customer not found."}), 404
+
+
+@app.route("/edit_customer_account/<int:customer_id>", methods=["GET", "POST"])
+def edit_customer_account(customer_id):
+    conn = get_db_connection()
+    if request.method == "POST":
+        clinic_name = request.form["clinic_name"]
+        clinic_address = request.form["clinic_address"]
+        clinic_category = request.form["clinic_category"]
+        clinic_password = request.form.get("clinic_password", "").strip()
+        preferred_carrier = request.form.get("preferred_carrier")  # Capture preferred carrier
+
+        if clinic_password:
+            hashed_password = generate_password_hash(clinic_password)
+            conn.execute("""
+                UPDATE customer_account
+                SET clinic_name = ?, clinic_address = ?, clinic_category = ?, clinic_password = ?, preferred_carrier = ?
+                WHERE id = ?
+            """, (clinic_name, clinic_address, clinic_category, hashed_password, preferred_carrier, customer_id))
+        else:
+            conn.execute("""
+                UPDATE customer_account
+                SET clinic_name = ?, clinic_address = ?, clinic_category = ?, preferred_carrier = ?
+                WHERE id = ?
+            """, (clinic_name, clinic_address, clinic_category, preferred_carrier, customer_id))
+        conn.commit()
+        flash("Customer account updated successfully!", "success")
+        return redirect(url_for("customers"))
+
+    customer = conn.execute("SELECT * FROM customer_account WHERE id = ?", (customer_id,)).fetchone()
+    carriers = conn.execute("SELECT name FROM carriers").fetchall()  # Fetch carriers
+    conn.close()
+
+    return render_template("edit_customer_account.html", customer=customer, carriers=carriers)
+
+#endregion
+
+#region Order Confirmation
+
+@app.route('/get_pending_orders', methods=['GET'])
+def get_pending_orders():
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        return jsonify({"error": "Access restricted to admins only."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Fetch pending orders and calculate total_price dynamically
+    pending_orders = cursor.execute("""
+        SELECT 
+            o.order_id, 
+            o.clinic_name, 
+            o.clinic_address, 
+            o.category, 
+            o.lines, 
+            o.quantity, 
+            o.finalized_time,
+            SUM(oi.quantity * p.price) AS total_price
+        FROM orders o
+        LEFT JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN products p ON oi.item_name = p.product_name
+        WHERE o.order_confirmed = 'Pending'
+        GROUP BY o.order_id
+        ORDER BY o.finalized_time DESC
+    """).fetchall()
+
+    conn.close()
+
+    # Convert rows to a list of dictionaries
+    orders = [dict(row) for row in pending_orders]
+    return jsonify(orders)
+
+
+
+
+@app.route('/confirm_order_status', methods=['POST'])
+def confirm_order_status():
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        return jsonify({"error": "Access restricted to admins only."}), 403
+
+    data = request.json
+    order_id = data.get('order_id')
+    new_status = data.get('status')
+
+    if new_status not in ['Confirmed', 'Rejected']:
+        return jsonify({"error": "Invalid status."}), 400
+
+    # Retrieve the current logged-in user's username
+    conn = get_db_connection()
+    user = conn.execute("SELECT username FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    username = user["username"] if user else "Unknown"
+
+    # Update the order's confirmation status and finalized_by field
+    conn.execute("""
+        UPDATE orders
+        SET order_confirmed = ?, finalized_by = ?
+        WHERE order_id = ?
+    """, (new_status, username, order_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({"message": f"Order {order_id} has been {new_status.lower()}."})
 
 
 #endregion

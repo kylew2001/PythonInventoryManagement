@@ -10,8 +10,11 @@ CREATE TABLE IF NOT EXISTS orders (
     carrier TEXT,
     category TEXT DEFAULT 'unallocated', -- unallocated, misc, on_hold, pick-ups, allocated
     status TEXT, -- new, old, urgent, priority
-    allocated_to INTEGER
+    allocated_to INTEGER,
+    order_confirmed TEXT CHECK(order_confirmed IN ('Pending', 'Confirmed', 'Rejected')) DEFAULT 'Pending'
 );
+
+
 
 CREATE TABLE IF NOT EXISTS order_items (
     item_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -70,8 +73,14 @@ CREATE TABLE IF NOT EXISTS customer_account (
     clinic_address TEXT NOT NULL,
     clinic_username TEXT UNIQUE NOT NULL,
     clinic_password TEXT NOT NULL,
-    clinic_category TEXT NOT NULL
+    clinic_category TEXT NOT NULL,
+    priority_customer BOOLEAN DEFAULT 0,
+    preferred_carrier TEXT
 );
+
+
+
+
 
 
 CREATE TABLE IF NOT EXISTS product_stock (

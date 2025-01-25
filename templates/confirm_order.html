@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Orders</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/scripts.js" defer></script>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        button {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .confirm-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .confirm-btn:hover {
+            background-color: #45a049;
+        }
+
+        .reject-btn {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .reject-btn:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %}
+
+    <main class="container">
+        <h1>Confirm Orders</h1>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Clinic Name</th>
+                    <th>Category</th>
+                    <th>Lines</th>
+                    <th>Quantity</th>
+                    <th>Total Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTable">
+                <tr><td colspan="7">Loading orders...</td></tr>
+            </tbody>
+        </table>
+    </main>
+
+    <script>
+    // Fetch and display pending orders
+    function fetchPendingOrders() {
+        fetch('/get_pending_orders')
+            .then(response => response.json())
+            .then(orders => {
+                const ordersTable = document.getElementById('ordersTable');
+                ordersTable.innerHTML = ''; // Clear existing rows
+
+                if (orders.error) {
+                    ordersTable.innerHTML = `<tr><td colspan="7">${orders.error}</td></tr>`;
+                    return;
+                }
+
+                if (orders.length === 0) {
+                    ordersTable.innerHTML = '<tr><td colspan="7">No pending orders.</td></tr>';
+                    return;
+                }
+
+                orders.forEach(order => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${order.order_id}</td>
+                        <td>${order.clinic_name}</td>
+                        <td>${order.category}</td>
+                        <td>${order.lines}</td>
+                        <td>${order.quantity}</td>
+                        <td>$${order.total_price.toFixed(2)}</td>
+                        <td>
+                            <button class="confirm-btn" onclick="updateOrderStatus(${order.order_id}, 'Confirmed')">Confirm</button>
+                            <button class="reject-btn" onclick="updateOrderStatus(${order.order_id}, 'Rejected')">Reject</button>
+                        </td>
+                    `;
+                    ordersTable.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching orders:', error);
+                const ordersTable = document.getElementById('ordersTable');
+                ordersTable.innerHTML = '<tr><td colspan="7">Error loading orders. Please try again later.</td></tr>';
+            });
+    }
+
+    // Update order status
+    function updateOrderStatus(orderId, status) {
+        fetch('/confirm_order_status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message || 'Order status updated.');
+            fetchPendingOrders(); // Refresh the table
+        })
+        .catch(error => {
+            console.error('Error updating order status:', error);
+            alert('Failed to update order status. Please try again.');
+        });
+    }
+
+    // Fetch pending orders on page load
+    document.addEventListener('DOMContentLoaded', fetchPendingOrders);
+</script>
+
+</body>
+</html>
