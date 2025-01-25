@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <style>
+        /* Styles for layout */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            display: flex;
+            flex-direction: column; /* Change to column layout for centering */
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-message {
+            width: 100%; /* Ensure it spans the full width */
+            text-align: center;
+            margin-bottom: 20px; /* Add space between the message and login sections */
+        }
+
+        .messages {
+            margin: 0 auto; /* Center the flash message horizontally */
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 50%; /* Limit the width of the message box */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .messages.danger {
+            background-color: #f8d7da;
+            color: #842029;
+        }
+
+        .messages.success {
+            background-color: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+        }
+
+        .login-container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 400px;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button, .secondary-button {
+    width: 100%; /* Make buttons and anchor tags occupy full width */
+    padding: 10px;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 4px;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    margin-top: 10px;
+    text-decoration: none;
+    text-align: center;
+    display: block; /* Ensure anchor tags are block elements, like buttons */
+    box-sizing: border-box; /* Include padding and border in width calculation */
+}
+
+.secondary-button {
+    background-color: #007bff;
+}
+
+.secondary-button:hover {
+    background-color: #0056b3;
+}
+
+form {
+    margin: 0; /* Ensure forms don’t add extra margins */
+}
+
+    </style>
+</head>
+<body>
+    <!-- Flash messages displayed above the login sections -->
+    <div class="login-message">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="messages {{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container">
+        <!-- User Login Section -->
+        <div class="login-container">
+            <h1>User Login</h1>
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">Username:</label>
+                    <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password:</label>
+                    <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <form action="{{ url_for('create_account') }}">
+                <button type="submit" class="secondary-button">Create Account</button>
+            </form>
+        </div>
+
+        <!-- Customer Login Section -->
+        <div class="login-container">
+            <h1>Customer Login</h1>
+            <form method="POST" action="{{ url_for('customer_login') }}">
+                <div class="form-group">
+                    <label for="clinic_username">Clinic Username:</label>
+                    <input type="text" id="clinic_username" name="clinic_username" placeholder="Enter clinic username" required>
+                </div>
+                <div class="form-group">
+                    <label for="clinic_password">Clinic Password:</label>
+                    <input type="password" id="clinic_password" name="clinic_password" placeholder="Enter clinic password" required>
+                </div>
+                <button type="submit">Login</button>
+            </form>
+            <!-- Fixed Create Customer Account button -->
+            <a href="{{ url_for('create_customer_account') }}" class="secondary-button">Create Customer Account</a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Template</title> <!-- You can customize the title -->
+    <link rel="stylesheet" href="/static/styles.css"> <!-- Change stylesheet path if needed -->
+    <style>
+        /* Customizable styles for the table container */
+        .table-container {
+            max-height: 650px;
+            overflow-y: auto;
+            margin-top: 20px;
+            transition: opacity 0.3s ease;
+        }
+        /* Customizable styles for modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            float: right;
+        }
+        .delete-btn {
+            background-color: #f44336; /* Customizable delete button color */
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %} <!-- Replace with your navigation or menu template -->
+
+    <header>
+        <h1>Manage Records Template</h1> <!-- Update header title -->
+    </header>
+
+    <div class="container">
+        <button id="openModal" class="button">Add New Record</button> <!-- Button text can be changed -->
+
+        <div class="filter-bar">
+            <!-- Search bar can be customized -->
+            <form action="{{ url_for('template_manage_records') }}" method="GET" style="display: flex; align-items: center; gap: 10px;">
+                <input type="text" name="search" placeholder="Search..." value="{{ search_query }}">
+                <button type="submit" class="button">Search</button> <!-- Button text can be changed -->
+            </form>
+        </div>
+
+        <div class="record-counter">
+            <!-- Message can be customized -->
+            Showing {{ filtered_count }} of {{ total_records }} records
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <!-- Column headers can be customized -->
+                        <th>Record ID</th>
+                        <th>Record Name</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if records %}
+                    {% for record in records %}
+                        <tr>
+                            <!-- Customize table data columns -->
+                            <td>{{ record.record_id }}</td>
+                            <td>{{ record.record_name }}</td>
+                            <td>{{ record.description }}</td>
+                            <td>{{ record.category }}</td>
+                            <td>{{ record.status }}</td>
+                            <td class="actions">
+                                <!-- Button actions and text can be changed -->
+                                <button class="edit-btn" data-record-id="{{ record.record_id }}" data-record-name="{{ record.record_name }}" data-description="{{ record.description }}" data-category="{{ record.category }}" data-status="{{ record.status }}">Edit</button>
+                                <button class="delete-btn" data-record-id="{{ record.record_id }}">Delete</button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="6">No records found.</td></tr> <!-- Customize empty state message -->
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add New Record Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAddModal">&times;</span>
+            <h2>Add New Record</h2> <!-- Header can be customized -->
+            <form id="addRecordForm" method="POST">
+                <!-- Input fields and labels can be changed -->
+                <label for="record_name">Record Name:</label>
+                <input type="text" id="record_name" name="record_name" required><br><br>
+
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" required></textarea><br><br>
+
+                <label for="category">Category:</label>
+                <input type="text" id="category" name="category" required><br><br>
+
+                <label for="status">Status:</label>
+                <input type="text" id="status" name="status" required><br><br>
+
+                <button type="submit" class="button">Add Record</button> <!-- Button text can be changed -->
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeEditModal">&times;</span>
+            <h2>Edit Record</h2> <!-- Header can be customized -->
+            <form id="editRecordForm" method="POST">
+                <input type="hidden" id="editRecordId" name="record_id">
+                <!-- Input fields and labels can be changed -->
+                <label for="editRecordName">Record Name</label>
+                <input type="text" id="editRecordName" name="record_name" required><br><br>
+
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" name="description" required></textarea><br><br>
+
+                <label for="editCategory">Category</label>
+                <input type="text" id="editCategory" name="category" required><br><br>
+
+                <label for="editStatus">Status</label>
+                <input type="text" id="editStatus" name="status" required><br><br>
+
+                <button type="submit" class="button">Save Changes</button> <!-- Button text can be changed -->
+            </form>
+        </div>
+    </div>
+</body>
+<script>
+    // Modal handling for Add New Record
+    const modal = document.getElementById("myModal"); // Replace "myModal" with a unique modal ID
+    const btn = document.getElementById("openModal"); // Replace "openModal" with a unique button ID
+    const closeBtnAdd = document.getElementById("closeAddModal"); // Replace "closeAddModal" with a unique close button ID
+
+    btn.onclick = function () {
+        modal.style.display = "block"; // Custom modal behavior
+    }
+
+    closeBtnAdd.onclick = function () {
+        modal.style.display = "none"; // Custom modal behavior
+    }
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            modal.style.display = "none"; // Custom modal behavior
+        }
+    }
+
+    // Modal handling for Edit Record
+    const editModal = document.getElementById('editModal'); // Replace "editModal" with a unique modal ID
+    const editButtons = document.querySelectorAll('.edit-btn'); // Replace ".edit-btn" with a unique button class
+
+    editButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            // Replace data-* attributes with your desired attributes
+            const recordId = event.target.getAttribute('data-record-id');
+            const recordName = event.target.getAttribute('data-record-name');
+            const description = event.target.getAttribute('data-description');
+            const category = event.target.getAttribute('data-category');
+            const status = event.target.getAttribute('data-status');
+
+            // Replace input field IDs with your desired names
+            document.getElementById('editRecordId').value = recordId;
+            document.getElementById('editRecordName').value = recordName;
+            document.getElementById('editDescription').value = description;
+            document.getElementById('editCategory').value = category;
+            document.getElementById('editStatus').value = status;
+
+            editModal.style.display = 'block'; // Custom modal behavior
+        });
+    });
+
+    const closeBtnEdit = document.getElementById("closeEditModal"); // Replace "closeEditModal" with a unique close button ID
+
+    closeBtnEdit.addEventListener('click', () => {
+        editModal.style.display = 'none'; // Custom modal behavior
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === editModal) {
+            editModal.style.display = 'none'; // Custom modal behavior
+        }
+    });
+
+    // Form submission for adding a record
+    document.getElementById('addRecordForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(this); // Form data handling can be customized
+
+        fetch('/template_add_record', { // Replace "/template_add_record" with your desired endpoint
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record added successfully!'); // Replace success message
+                    modal.style.display = "none"; // Custom modal behavior
+                    window.location.href = window.location.href; // Page reload logic
+                } else {
+                    alert('Failed to add record.'); // Replace error message
+                }
+            })
+            .catch(error => console.error('Error:', error)); // Error handling
+    });
+
+    // Form submission for editing a record
+    document.getElementById('editRecordForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const formData = new FormData(this); // Form data handling can be customized
+
+        fetch('/template_edit_record', { // Replace "/template_edit_record" with your desired endpoint
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record updated successfully!'); // Replace success message
+                    editModal.style.display = "none"; // Custom modal behavior
+                    window.location.href = window.location.href; // Page reload logic
+                } else {
+                    alert('Failed to update record.'); // Replace error message
+                }
+            })
+            .catch(error => console.error('Error:', error)); // Error handling
+    });
+
+    // Handle Delete Button
+    const deleteButtons = document.querySelectorAll('.delete-btn'); // Replace ".delete-btn" with a unique button class
+
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            const recordId = event.target.getAttribute('data-record-id'); // Replace "data-record-id" with your attribute
+
+            if (confirm('Are you sure you want to delete this record?')) { // Replace confirmation message
+                fetch(`/template_delete_record/${recordId}`, { // Replace endpoint "/template_delete_record/"
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ record_id: recordId }) // Request payload customization
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Record deleted successfully!'); // Replace success message
+                            location.reload(); // Page reload logic
+                        } else {
+                            alert('Failed to delete record.'); // Replace error message
+                        }
+                    })
+                    .catch(error => console.error('Error:', error)); // Error handling
+            }
+        });
+    });
+</script>
+<script src="/static/scripts.js"></script>
+</html>
+
+
+
+@app.route('/record_template', methods=['GET', 'POST'])  # Replace "record_template" with your desired endpoint
+def template_manage_records():  # Replace "template_manage_records" with your desired function name
+    conn = get_db_connection()
+
+    # Handle POST method (adding records)
+    if request.method == 'POST':  # This block can handle other POST actions
+        record_name = request.form['record_name']  # Replace "record_name" with your field name
+        description = request.form['description']  # Replace "description" with your field name
+        category = request.form['category']  # Replace "category" with your field name
+        status = request.form['status']  # Replace "status" with your field name
+
+        try:
+            conn.execute(
+                'INSERT INTO test_records (record_name, description, category, status) VALUES (?, ?, ?, ?)',
+                (record_name, description, category, status))  # Replace table/column names
+            conn.commit()
+        except sqlite3.IntegrityError:
+            pass  # Customize error handling
+
+    search_query = request.args.get('search', '').strip()  # Replace "search" with your query name
+    if search_query:
+        query = "SELECT * FROM test_records WHERE record_name LIKE ?"  # Replace "test_records" or columns
+        params = [f"%{search_query}%"]
+    else:
+        query = "SELECT * FROM test_records"  # Replace table name
+        params = []
+
+    records = conn.execute(query, params).fetchall()
+    total_records = conn.execute("SELECT COUNT(*) FROM test_records").fetchone()[0]
+    filtered_count = len(records)
+
+    conn.close()
+
+    return render_template(  # Replace template or variables as needed
+        'record_template.html',  # Replace "record_template.html" with your template
+        records=records,
+        search_query=search_query,
+        filtered_count=filtered_count,
+        total_records=total_records
+    )
+
+
+@app.route('/template_add_record', methods=['GET', 'POST'])  # Replace "template_add_record" with your endpoint
+def template_add_record():  # Replace "template_add_record" with your function name
+    if request.method == 'POST':
+        record_name = request.form['record_name']  # Replace "record_name" with your field
+        description = request.form['description']  # Replace "description" with your field
+        category = request.form['category']  # Replace "category" with your field
+        status = request.form['status']  # Replace "status" with your field
+
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO test_records (record_name, description, category, status) VALUES (?, ?, ?, ?)',
+            (record_name, description, category, status))  # Replace table/column names
+        conn.commit()
+        conn.close()
+
+    return jsonify({"success": True})  # Replace response as needed
+
+
+@app.route('/template_edit_record', methods=['POST'])  # Replace "template_edit_record" with your endpoint
+def template_edit_record():  # Replace "template_edit_record" with your function name
+    record_id = request.form['record_id']  # Replace "record_id" with your field
+    record_name = request.form['record_name']  # Replace "record_name" with your field
+    description = request.form['description']  # Replace "description" with your field
+    category = request.form['category']  # Replace "category" with your field
+    status = request.form['status']  # Replace "status" with your field
+
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE test_records SET record_name = ?, description = ?, category = ?, status = ? WHERE record_id = ?',
+        (record_name, description, category, status, record_id))  # Replace table/column names
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})  # Replace response as needed
+
+
+@app.route('/template_delete_record/<int:record_id>', methods=['POST'])  # Replace "template_delete_record" with your endpoint
+def template_delete_record(record_id):  # Replace "template_delete_record" with your function name
+    conn = get_db_connection()
+
+    # Delete the record by ID
+    conn.execute('DELETE FROM test_records WHERE record_id = ?', (record_id,))  # Replace table name
+    conn.commit()
+    conn.close()
+
+    return jsonify({"success": True})  # Replace response as needed

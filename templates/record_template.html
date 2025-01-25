@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Record Template</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .table-container {
+            max-height: 650px;
+            overflow-y: auto;
+            margin-top: 20px;
+            transition: opacity 0.3s ease;
+        }
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+        /* Opacity change when menu modal is open */
+.modal-active .table-container {
+    opacity: 0.3; /* Lower opacity for the table when the modal is active */
+}
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            float: right;
+        }
+        .close-btn:hover,
+        .close-btn:focus {
+            color: black;
+            cursor: pointer;
+        }
+        .delete-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.delete-btn:hover {
+    background-color: #d32f2f;
+}
+
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %}
+
+    <header>
+        <h1>Manage Records Template</h1>
+    </header>
+
+    <div class="container">
+        <button id="openModal" class="button">Add New Record</button>
+
+        <div class="filter-bar">
+            <form action="{{ url_for('template_manage_records') }}" method="GET" style="display: flex; align-items: center; gap: 10px;">
+    <input type="text" name="search" placeholder="Search..." value="{{ search_query }}">
+    <button type="submit" class="button">Search</button>
+</form>
+
+
+        </div>
+
+        <div class="record-counter">
+            Showing {{ filtered_count }} of {{ total_records }} records
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Record ID</th>
+                        <th>Record Name</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% if records %}
+                    {% for record in records %}
+                        <tr>
+                            <td>{{ record.record_id }}</td>
+                            <td>{{ record.record_name }}</td>
+                            <td>{{ record.description }}</td>
+                            <td>{{ record.category }}</td>
+                            <td>{{ record.status }}</td>
+                            <td class="actions">
+                <!-- Edit Button -->
+                <button class="edit-btn" data-record-id="{{ record.record_id }}" data-record-name="{{ record.record_name }}" data-description="{{ record.description }}" data-category="{{ record.category }}" data-status="{{ record.status }}">Edit</button>
+                <!-- Delete Button -->
+                <button class="delete-btn" data-record-id="{{ record.record_id }}">Delete</button>
+            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                        <tr><td colspan="6">No records found.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Add New Record Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAddModal">&times;</span>
+            <h2>Add New Record</h2>
+            <form id="addRecordForm" method="POST">
+                <label for="record_name">Record Name:</label>
+                <input type="text" id="record_name" name="record_name" required><br><br>
+
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" required></textarea><br><br>
+
+                <label for="category">Category:</label>
+                <input type="text" id="category" name="category" required><br><br>
+
+                <label for="status">Status:</label>
+                <input type="text" id="status" name="status" required><br><br>
+
+                <button type="submit" class="button">Add Record</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Record Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeEditModal">&times;</span>
+            <h2>Edit Record</h2>
+            <form id="editRecordForm" method="POST">
+                <input type="hidden" id="editRecordId" name="record_id">
+                <label for="editRecordName">Record Name</label>
+                <input type="text" id="editRecordName" name="record_name" required><br><br>
+
+                <label for="editDescription">Description</label>
+                <textarea id="editDescription" name="description" required></textarea><br><br>
+
+                <label for="editCategory">Category</label>
+                <input type="text" id="editCategory" name="category" required><br><br>
+
+                <label for="editStatus">Status</label>
+                <input type="text" id="editStatus" name="status" required><br><br>
+
+                <button type="submit" class="button">Save Changes</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Modal handling for Add New Record
+        const modal = document.getElementById("myModal");
+        const btn = document.getElementById("openModal");
+        const closeBtnAdd = document.getElementById("closeAddModal");
+
+        btn.onclick = function() {
+            modal.style.display = "block";
+        }
+
+        closeBtnAdd.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        // Modal handling for Edit Record
+        const editModal = document.getElementById('editModal');
+        const editButtons = document.querySelectorAll('.edit-btn');
+
+        editButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                const recordId = event.target.getAttribute('data-record-id');
+                const recordName = event.target.getAttribute('data-record-name');
+                const description = event.target.getAttribute('data-description');
+                const category = event.target.getAttribute('data-category');
+                const status = event.target.getAttribute('data-status');
+
+                document.getElementById('editRecordId').value = recordId;
+                document.getElementById('editRecordName').value = recordName;
+                document.getElementById('editDescription').value = description;
+                document.getElementById('editCategory').value = category;
+                document.getElementById('editStatus').value = status;
+
+                editModal.style.display = 'block';
+            });
+        });
+
+        const closeBtnEdit = document.getElementById("closeEditModal");
+
+        closeBtnEdit.addEventListener('click', () => {
+            editModal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === editModal) {
+                editModal.style.display = 'none';
+            }
+        });
+
+        // Form submission for adding a record
+        document.getElementById('addRecordForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch('/template_add_record', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record added successfully!');
+                    modal.style.display = "none"; // Close the modal
+                    window.location.href = window.location.href; // Reload the page to show new record
+                } else {
+                    alert('Failed to add record.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Form submission for editing a record
+        document.getElementById('editRecordForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(this);
+
+            fetch('/template_edit_record', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record updated successfully!');
+                    editModal.style.display = "none"; // Close the modal
+                    window.location.href = window.location.href; // Reload the page to show updated record
+                } else {
+                    alert('Failed to update record.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        // Handle Delete Button
+const deleteButtons = document.querySelectorAll('.delete-btn');
+
+deleteButtons.forEach(button => {
+    button.addEventListener('click', (event) => {
+        const recordId = event.target.getAttribute('data-record-id');
+        if (confirm('Are you sure you want to delete this record?')) {
+            // Make the DELETE request to the backend
+            fetch(`/template_delete_record/${recordId}`, {
+                method: 'POST', // POST to match your Flask route method
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ record_id: recordId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Record deleted successfully!');
+                    location.reload(); // Reload the page to reflect the changes
+                } else {
+                    alert('Failed to delete record.');
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    });
+});
+
+    </script>
+<script src="/static/scripts.js"></script>
+</body>
+</html>

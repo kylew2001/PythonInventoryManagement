@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allocation Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+
+<!-- Include the Menu -->
+{% include 'menu.html' %}
+
+
+    <h1>Allocation Dashboard</h1>
+
+
+    <div class="board">
+        <!-- Top Section -->
+        <div class="row">
+    <div class="column" id="unallocated">
+        <h3>Unallocated</h3>
+        {% for order in orders %}
+            {% if order['category'] == 'unallocated' %}
+            <div class="order {{ order['status'] }}" data-id="{{ order['order_id'] }}" draggable="true">
+                <div class="order-header">
+                    <span>#{{ order['order_id'] }}</span>
+                    <span>{{ order['lines'] }}</span>
+                    <span>{{ order['quantity'] }}</span>
+                </div>
+                <div class="order-body">
+                    <p>{{ order['clinic_name'] }}</p>
+                    <p>{{ order['clinic_address'] }}</p>
+                </div>
+                <div class="order-footer">
+                    <p>Finalized: {{ order['finalized_time'] }} ({{ order['finalized_by'] }})</p>
+                    <p>Carrier: {{ order['carrier'] }}</p>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    {% for column in ['Van', '9:30', '11:30', '1:30', '3:30', '5:30'] %}
+    <div class="column" id="{{ column }}">
+        <h3>{{ column }}</h3>
+        {% for order in orders %}
+            {% if order['category'] == column %}
+            <div class="order {{ order['status'] }}" data-id="{{ order['order_id'] }}" draggable="true">
+                <div class="order-header">
+                    <span>#{{ order['order_id'] }}</span>
+                    <span>{{ order['lines'] }}</span>
+                    <span>{{ order['quantity'] }}</span>
+                </div>
+                <div class="order-body">
+                    <p>{{ order['clinic_name'] }}</p>
+                    <p>{{ order['clinic_address'] }}</p>
+                </div>
+                <div class="order-footer">
+                    <p>Finalized: {{ order['finalized_time'] }} ({{ order['finalized_by'] }})</p>
+                    <p>Carrier: {{ order['carrier'] }}</p>
+                </div>
+            </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+
+        <!-- Bottom Section -->
+
+    <div class="row">
+        {% for column in ['misc', 'on_hold', 'pick-ups', 'allocated'] %}
+        <div class="column" id="{{ column }}">
+            <h3>{{ column.replace('_', ' ').capitalize() }}</h3>
+            {% for order in orders %}
+                {% if order['category'] == column %}
+                <div class="order {{ order['status'] }}" data-id="{{ order['order_id'] }}" draggable="true">
+                    <div class="order-header">
+                        <span>#{{ order['order_id'] }}</span>
+                        <span>{{ order['lines'] }}</span>
+                        <span>{{ order['quantity'] }}</span>
+                    </div>
+                    <div class="order-body">
+                        <p>{{ order['clinic_name'] }}</p>
+                        <p>{{ order['clinic_address'] }}</p>
+                    </div>
+                    <div class="order-footer">
+                        <p>Finalized: {{ order['finalized_time'] }} ({{ order['finalized_by'] }})</p>
+                        <p>Carrier: {{ order['carrier'] }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+    <div id="contextMenu" class="context-menu">
+        <ul>
+            <li id="allocateOption">Allocate</li>
+            <li id="markUrgentOption">Mark as Urgent</li>
+        </ul>
+    </div>
+<div id="orderModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Order Details</h3>
+        <div id="modal-order-details"></div>
+    </div>
+</div>
+
+
+
+    <script>
+    // Drag-and-Drop Logic
+    document.querySelectorAll('.column').forEach(column => {
+        column.addEventListener('dragover', (e) => {
+            e.preventDefault(); // Allow drop
+        });
+
+        column.addEventListener('drop', async (e) => {
+            e.preventDefault();
+
+            // Prevent dropping into "Allocated" column
+            if (column.id === 'allocated') {
+                alert("You cannot move orders directly to the Allocated section.");
+                return;
+            }
+
+            const orderId = e.dataTransfer.getData('text/plain'); // Get the dragged order ID
+            const orderDiv = document.querySelector(`.order[data-id="${orderId}"]`);
+            column.appendChild(orderDiv); // Move the order to the new column visually
+
+            // Update the backend to reflect the new category
+            const newCategory = column.id;
+            try {
+                const response = await fetch(`/update_order`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order_id: orderId, category: newCategory })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to update the order category in the database.');
+                }
+
+                const result = await response.json();
+                console.log('Database update successful:', result);
+            } catch (error) {
+                console.error('Error updating order category:', error);
+                alert('There was a problem updating the order in the database.');
+            }
+        });
+    });
+
+    // Add Drag Start Listener
+    document.querySelectorAll('.order').forEach(order => {
+        order.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', e.target.dataset.id);
+        });
+    });
+
+    // Modal Logic
+// Modal Logic
+const modal = document.getElementById('orderModal');
+const closeModal = document.querySelector('#orderModal .close');
+
+// Double-Click to Show Order Details
+document.querySelectorAll('.order').forEach(order => {
+    order.addEventListener('dblclick', function () {
+        const orderId = this.getAttribute('data-id');
+
+        // Fetch order details from the backend
+        fetch(`/order_items/${orderId}`)
+            .then(response => response.json())
+            .then(orderDetails => {
+                // Populate modal content
+                const modalDetails = document.getElementById('modal-order-details');
+                modalDetails.innerHTML = `
+                    <p><strong>Order ID:</strong> ${orderDetails.order_id}</p>
+                    <p><strong>Clinic Name:</strong> ${orderDetails.clinic_name}</p>
+                    <p><strong>Clinic Address:</strong> ${orderDetails.clinic_address}</p>
+                    <p><strong>Finalized Time:</strong> ${orderDetails.finalized_time}</p>
+                    <p><strong>Finalized By:</strong> ${orderDetails.finalized_by}</p>
+                    <p><strong>Carrier:</strong> ${orderDetails.carrier}</p>
+                    <p><strong>Category:</strong> ${orderDetails.category}</p>
+                    <p><strong>Status:</strong> ${orderDetails.status.charAt(0).toUpperCase() + orderDetails.status.slice(1)}</p>
+                    <p><strong>Description:</strong> ${orderDetails.description || 'No description provided'}</p>
+                `;
+
+                // Display the modal
+                modal.style.display = 'flex'; // Show modal centered
+            })
+            .catch(error => {
+                console.error('Error fetching order details:', error);
+            });
+    });
+});
+
+// Close the modal when clicking the close button
+closeModal.addEventListener('click', () => {
+    modal.style.display = 'none'; // Hide modal
+});
+
+// Close the modal when clicking outside the modal content
+window.addEventListener('click', (event) => {
+    if (event.target === modal) {
+        modal.style.display = 'none'; // Hide modal if clicked outside modal content
+    }
+});
+
+
+// Ensure the modal is hidden on page load
+window.addEventListener('load', () => {
+    const modal = document.getElementById('orderModal');
+    modal.style.display = 'none'; // Ensure the modal is hidden
+});
+
+
+
+
+
+
+
+
+// Ensure both modals are hidden on page load
+window.addEventListener('load', () => {
+    document.getElementById('menuModal').style.display = 'none';
+    document.getElementById('orderModal').style.display = 'none';
+
+});
+
+</script>
+<script src="/static/scripts.js"></script>
+
+</body>
+</html>

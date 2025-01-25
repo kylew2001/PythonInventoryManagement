@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 10px;
+            display: inline-block;
+            width: 50%;
+            justify-content: center;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        .scrollable-container {
+            max-height: 800px; /* Adjust this height as needed */
+            overflow-y: scroll;
+            text-align: center;
+            padding: 10px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column; /* Stack buttons vertically */
+            align-items: center; /* Center buttons horizontally */
+        }
+
+        /* Styling for each button */
+        .scrollable-container a {
+            display: block;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+{% include 'menu.html' %}
+    <h1>Admin Panel - List of all pages</h1>
+    <div class="scrollable-container">
+        {% for file in html_files %}
+    <a href="{{ url_for('render_page', page=file) }}" class="button">{{ file }}</a>
+{% endfor %}
+
+    </div>
+
+</body>
+<script src="/static/scripts.js"></script>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Carriers</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+{% include 'menu.html' %}
+    <h1 style="text-align: center;">Manage Carriers</h1>
+
+    <form action="/carriers" method="POST" style="text-align: center; margin-bottom: 20px;">
+        <label for="name">Add Carrier:</label>
+        <input type="text" name="name" id="name" required>
+        <button type="submit" style="background-color: #4CAF50; color: white; padding: 5px 10px; border: none; border-radius: 5px;">Add</button>
+    </form>
+    <table style="margin: 0 auto; border-collapse: collapse; width: 50%; text-align: left;">
+        <thead>
+            <tr>
+                <th style="padding: 10px; background-color: #4CAF50; color: white;">Carrier Name</th>
+                <th style="padding: 10px; background-color: #4CAF50; color: white;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for carrier in carriers %}
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;">{{ carrier['name'] }}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">
+                    <form action="/delete_carrier/{{ carrier['id'] }}" method="POST" style="display: inline;">
+                        <button type="submit" style="background-color: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 5px;">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+<script src="/static/scripts.js"></script>
+
+</body>
+</html>

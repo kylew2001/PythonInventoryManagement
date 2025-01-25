@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Item Information and Stock</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .table-container {
+            max-height: 650px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+        }
+
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 600px;
+            border-radius: 8px;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            float: right;
+            cursor: pointer;
+        }
+
+        .close-btn:hover {
+            color: black;
+        }
+
+        table tbody tr:hover {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %}
+
+    <header class="header">
+        <h1>Item Information and Stock</h1>
+    </header>
+
+    <div class="container">
+        <div class="filter-bar">
+            <form action="{{ url_for('item_information') }}" method="GET" style="display: flex; align-items: center; gap: 10px;">
+                <input type="text" name="search" placeholder="Search by Item Name..." value="{{ search_query }}">
+                <button type="submit" class="button">Search</button>
+            </form>
+        </div>
+
+        <div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Item ID</th>
+                <th>Item Name</th>
+                <th>Stock Weight</th>
+                <th>Stock Location</th>
+                <th>Total Quantity</th>
+                <th>Primary Quantity</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if items %}
+                {% for item in items %}
+                    <tr ondblclick="openItemDetails({{ item['product_id'] }})">
+                        <td>{{ item["product_id"] }}</td>
+                        <td>{{ item["product_name"] }}</td>
+                        <td>{{ item["product_weight"] }} {{ item["weight_type"] }}</td>
+                        <td>{{ item["stock_location"] or 'N/A' }}</td>
+                        <td>{{ item["total_quantity"] or 0 }}</td>
+                        <td>{{ item["primary_quantity"] or 0 }}</td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6">No items found.</td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+    </div>
+
+    <div id="itemDetailsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" id="closeItemDetailsModal">&times;</span>
+        <h2>Item Details</h2>
+        <div id="modal-content-details">
+            <!-- Product details will be dynamically injected here -->
+        </div>
+        <div id="adminFields" style="display: none; margin-top: 20px;">
+            <form id="stockForm">
+                <label for="totalQuantity">Total Quantity:</label>
+                <input type="number" id="totalQuantity" name="totalQuantity" >
+
+                <label for="primaryQuantity">Primary Quantity:</label>
+                <input type="number" id="primaryQuantity" name="primaryQuantity" >
+
+                <label for="stockLocation">Stock Location:</label>
+                <input type="text" id="stockLocation" name="stockLocation" >
+
+                <label for="primaryCapacity">Primary Capacity:</label>
+                <input type="number" id="primaryCapacity" name="primaryCapacity" >
+
+                <label for="barcode">Barcode:</label>
+                <input type="text" id="barcode" name="barcode" >
+
+                <button type="submit" class="button">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+    <script>
+        function openItemDetails(productId) {
+    console.log("Modal triggered for Product ID:", productId); // Debugging log
+
+    // Set the productId as a data attribute on the form
+    document.getElementById('stockForm').setAttribute('data-product-id', productId);
+
+    // Fetch product details from the server
+    fetch(`/get_product_details/${productId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+            } else {
+                console.log("Fetched data:", data); // Debugging log
+
+                // Populate modal with product and stock information
+                const modalContent = `
+                    <p><strong>Product ID:</strong> ${data.product_id}</p>
+                    <p><strong>Product Name:</strong> ${data.product_name}</p>
+                    <p><strong>Product Weight:</strong> ${data.product_weight}</p>
+                    <p><strong>Supplier:</strong> ${data.supplier}</p>
+                    <p><strong>Price:</strong> $${data.price}</p>
+                `;
+                document.getElementById('modal-content-details').innerHTML = modalContent;
+
+                // Show admin fields if the user is an admin
+                if (data.is_admin) {
+                    document.getElementById('adminFields').style.display = 'block';
+
+                    // Populate input fields based on variable type
+                    document.getElementById('totalQuantity').value = typeof data.total_quantity === "number" ? data.total_quantity : "";
+                    document.getElementById('primaryQuantity').value = typeof data.primary_quantity === "number" ? data.primary_quantity : "";
+                    document.getElementById('stockLocation').value = typeof data.stock_location === "string" ? data.stock_location : "N/A";
+                    document.getElementById('primaryCapacity').value = typeof data.primary_capacity === "number" ? data.primary_capacity : "";
+                    document.getElementById('barcode').value = typeof data.barcode === "string" ? data.barcode : "N/A";
+                } else {
+                    document.getElementById('adminFields').style.display = 'none';
+                }
+
+                // Show the modal
+                document.getElementById('itemDetailsModal').style.display = 'block';
+            }
+        })
+        .catch(error => console.error('Error fetching product details:', error));
+}
+
+
+
+
+
+document.getElementById('stockForm').addEventListener('submit', function (event) {
+    event.preventDefault();
+
+    const productId = this.getAttribute('data-product-id');
+    const payload = {
+        total_quantity: document.getElementById('totalQuantity').value || 0,
+        primary_quantity: document.getElementById('primaryQuantity').value || 0,
+        stock_location: document.getElementById('stockLocation').value || 'N/A',
+        primary_capacity: document.getElementById('primaryCapacity').value || 0,
+        barcode: document.getElementById('barcode').value || 'N/A',
+    };
+
+    fetch(`/update_stock/${productId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Stock information updated successfully!');
+            location.reload();
+        } else if (data.error) {
+            alert(data.error); // Show the error message
+        }
+    })
+    .catch(error => console.error('Error updating stock:', error));
+});
+
+
+
+
+
+
+
+
+
+
+// Close Modal
+document.getElementById('closeItemDetailsModal').addEventListener('click', () => {
+    document.getElementById('itemDetailsModal').style.display = 'none';
+});
+
+// Close modal on outside click
+window.addEventListener('click', (event) => {
+    const modal = document.getElementById('itemDetailsModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+});
+
+    </script>
+</body>
+</html>

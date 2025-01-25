@@ -1,0 +1,41 @@
+<div class="user-info">
+    <p>{{ logged_in_user }} is logged in</p>
+</div>
+
+<!-- Menu Button -->
+<div class="menu-container">
+    <button class="menu-button" onclick="toggleMenu()">☰ Menu</button>
+</div>
+
+<!-- Menu Modal (Pop-up Menu) -->
+<div id="menuModal" class="modal menu-modal">
+    <div class="modal-content">
+        <span class="close" onclick="toggleMenu()">&times;</span>
+        <h2>Menu</h2>
+        <ul>
+            <li><a href="/dashboard">Dashboard</a></li>
+            <li><a href="/carriers">Carriers</a></li>
+            <li><a href="/customers">Customers</a></li>
+            <li><a href="/item_information">Item Information</a></li>
+            {% if user_role == "Admin" %}
+                <li><a href="/users" class="button admin-button">Users</a></li>
+                <li><a href="/list_of_html_files" class="button admin-button">List of HTML pages</a></li>
+            <li><a href="/product_database" class="button admin-button">Product Database</a></li>
+            {% endif %}
+            <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="/static/scripts.js"></script>
+ <script>
+    // Automatically log out when the page is closed or the tab is closed
+    window.addEventListener('beforeunload', function() {
+        fetch('/logout', {
+            method: 'POST', // POST method to ensure the user is logged out
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        });
+    });
+</script>

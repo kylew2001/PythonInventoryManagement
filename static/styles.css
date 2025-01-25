@@ -1,0 +1,1056 @@
+/* Reset and base styles */
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh; /* Full viewport height */
+    overflow: hidden; /* Prevent entire page scrolling */
+
+}
+
+h1 {
+    text-align: center;
+    margin: 10px 0;
+}
+
+a {
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
+    text-decoration: none;
+    color: blue;
+}
+
+/* Sticky headers for columns */
+.column h3 {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #4CAF50; /* Header background */
+    color: white; /* Header text color */
+    padding: 5px;
+    margin: 0;
+    border-bottom: 1px solid #ccc;
+    text-align: center;
+}
+
+
+/* Full viewport height for the entire board */
+.board {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Full height of the viewport */
+    gap: 0; /* Remove gaps between rows */
+    overflow: hidden; /* Prevent page scrolling */
+}
+
+/* Define rows */
+.row {
+    display: flex;
+    gap: 0;
+}
+
+/* Shared column styles */
+.column {
+    flex: 1;
+    border: 1px solid #ccc;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    box-sizing: border-box;
+    background-color: #f9f9f9;
+}
+
+.row:first-child {
+    height: 70%; /* Ensure top row takes up 70% of the height */
+    overflow-y: auto; /* Allow scrolling if content exceeds */
+    box-sizing: border-box; /* Include padding and border in height */
+}
+
+.row:last-child {
+    height: 30%; /* Ensure bottom row takes up 30% */
+    display: flex; /* Align columns horizontally */
+    gap: 0; /* No gaps between columns */
+    overflow-y: auto; /* Allow scrolling in the bottom row */
+    box-sizing: border-box; /* Ensure padding and border are included */
+}
+
+
+@media (max-width: 768px) {
+    .row:first-child {
+        height: 70%; /* Adjust for smaller screens */
+        overflow: auto;
+        box-sizing: border-box; /* Consistency with larger screens */
+    }
+
+    .row:last-child {
+        height: 30%; /* Adjust for smaller screens */
+        display: flex; /* Ensure horizontal alignment of columns */
+        gap: 0; /* Consistency with larger screens */
+        overflow: auto;
+        box-sizing: border-box; /* Ensure consistency */
+
+    }
+    .modal-content {
+        width: 90%; /* Make the modal content width smaller on smaller screens */
+        padding: 15px;
+        max-height: 85vh; /* Prevent modal from overflowing */
+        overflow: auto;
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling for modals */
+    }
+    body {
+        margin: 0;
+    padding: 0;
+    height: 100vh; /* Full viewport height */
+    overflow: auto; /* Allow scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+    }
+
+.fixed-header table, .table-container table {
+        font-size: 14px;
+    }
+    .fixed-header th, .table-container th, .fixed-header td, .table-container td {
+        padding: 8px;
+    }
+ /* Ensure the table adjusts for smaller screens */
+    .container {
+        padding: 10px; /* Add padding to the sides on smaller screens */
+        overflow: auto;
+    }
+
+    table, th, td {
+        font-size: 14px;
+    }
+
+    .actions a, .actions button {
+        font-size: 12px;
+        padding: 4px 8px;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filter-bar input[type="text"], .filter-bar select {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .order-header {
+        white-space: normal; /* Allows text to wrap */
+        word-wrap: break-word; /* Wrap long unbroken text */
+        overflow-wrap: break-word; /* Wrap long words */
+        word-break: normal; /* Prevent breaking words unless necessary */
+        max-width: 100%; /* Ensure the container doesn't overflow */
+        display: block; /* Ensure the container is block-level and wraps text */
+    }
+
+}
+
+
+
+/* Styling for individual orders */
+.order {
+    padding: 10px;
+    margin: 0;
+    border: 1px solid #000;
+    border-radius: 0;
+    background-color: #e0e0e0;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Header Section for Order ID, Lines, and Quantity */
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    font-size: 12px; /* Match smaller order size */
+    border-bottom: 1px solid #000; /* Line below header */
+    padding-bottom: 5px;
+}
+
+/* Body Section for Clinic Name and Address */
+.order-body {
+    font-size: 12px; /* Match smaller font size */
+    margin-top: 5px;
+}
+
+/* Footer Section for Finalized Time and Carrier */
+.order-footer {
+    font-size: 12px; /* Match smaller font size */
+    margin-top: 5px;
+}
+
+
+
+
+
+
+
+
+
+/* Status colors */
+.order.new {
+    background-color: #a8e6a3; /* Light Green */
+}
+
+.order.old {
+    background-color: #ffcc80; /* Light Orange */
+}
+
+.order.urgent {
+    background-color: #ff8a80; /* Light Red */
+}
+
+.order.priority {
+    background-color: #e1bee7; /* Light Purple */
+}
+
+.order-header, .order-body, .order-footer {
+    margin: 0;
+    padding: 0;
+}
+
+
+
+
+/* Context Menu Styling */
+.context-menu {
+    display: none;
+    position: absolute;
+    z-index: 1000;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+
+}
+
+.context-menu ul li {
+    padding: 5px 10px;
+    cursor: pointer;
+
+}
+
+.context-menu ul li:hover {
+    background-color: #f0f0f0;
+}
+
+
+
+/* Close Button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.table-container {
+    overflow-y: auto;
+    max-height: 80vh;
+    padding-top: 0px;
+    box-sizing: border-box;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+}
+
+
+
+
+
+
+td, th {
+    padding: 12px; /* Ensure enough padding for visibility */
+    box-sizing: border-box; /* Include padding in width and height */
+}
+
+tbody tr:last-child td {
+    padding-bottom: 15px; /* Add extra padding for the last row */
+}
+
+
+
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+.table-container::after {
+    content: '';
+    display: block;
+    height: 15px; /* Space to prevent clipping */
+}
+
+
+
+
+
+
+tbody > tr:last-child {
+    border: 2px solid green; /* Debug: Highlight the actual last row */
+}
+
+
+
+
+
+
+
+
+
+.button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px auto;
+    text-align: center;
+    color: white;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    width: auto;
+    background-color: #4CAF50;
+    transition: background-color 0.3s ease;
+}
+.button:hover {
+    background-color: #45a049;
+}
+.button:active {
+    background-color: #3e8e41;
+}
+
+
+
+/* Admin button styles (higher specificity to override .button styles) */
+ul li a.button.admin-button {
+    background-color: #cc1a1a !important; /* Red background */
+    margin: 5px 0; /* Specific margin for admin links */
+}
+
+ul li a.button.admin-button:hover {
+    background-color: #6e2b2b !important; /* Darker red on hover */
+}
+
+ul li a.button.admin-button:active {
+    background-color: #5c2323 !important; /* Even darker red when clicked */
+}
+
+
+
+
+
+/* Menu Button Styling */
+.menu-container {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+}
+
+.menu-button {
+    background-color: #4CAF50;
+    color: white;
+    font-size: 18px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.menu-button:hover {
+    background-color: #45a049;
+}
+
+/* Base Modal Styling */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Dimmed background */
+    z-index: 1000; /* Ensure it's on top of other content */
+    display: flex; /* Flexbox enabled */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    animation: fadeIn 0.3s ease-in-out; /* Optional fade-in effect */
+    overflow-y: auto; /* Enable vertical scrolling for the modal itself */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS devices */
+}
+
+/* Specific Menu Modal */
+.menu-modal .modal-content {
+    background-color: #fff;
+    padding: 10px; /* Reduced padding */
+    border: 1px solid #888;
+    width: 40%; /* Smaller width for tighter menu */
+    max-width: 400px; /* Restrict max width */
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.3s ease-in-out;
+    text-align: center;
+}
+
+/* Style each list item */
+.menu-modal li {
+    width: 100%; /* Ensure each list item takes up the full width */
+}
+
+/* Style the anchor tags inside the list items */
+.menu-modal li a {
+    display: block; /* Make the <a> block level so it takes up the full width */
+    padding: 10px 20px; /* Add some padding for better aesthetics */
+    text-decoration: none; /* Remove default link underline */
+    color: #000; /* Set text color */
+    width: 80%; /* Ensure <a> tags span the full width */
+    text-align: center; /* Align text to the center */
+}
+
+/* Optional: Hover effect to improve UI */
+.menu-modal li a:hover {
+    background-color: #f1f1f1; /* Light background on hover */
+}
+
+/* Menu Modal Header */
+.menu-modal h2 {
+    margin: 10px 0; /* Reduced margin */
+    font-size: 18px; /* Smaller font size */
+}
+
+/* Menu List */
+.menu-modal ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+#orderModal .modal-content .close:hover,
+#orderModal .modal-content .close:focus {
+    color: #000; /* Darker color on hover/focus */
+}
+/* Add specific styling for #orderModal to avoid affecting other modals */
+#orderModal .modal-content {
+    background-color: #fff; /* White background for order details */
+    padding: 20px; /* Add spacing inside the modal */
+    border: 1px solid #888;
+    width: 60%; /* Adjust width for better readability */
+    max-width: 600px; /* Prevent modal from becoming too wide */
+    border-radius: 8px; /* Rounded corners for a modern look */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
+    animation: fadeIn 0.3s ease-in-out;
+    overflow: auto; /* Enable scrolling for large content */
+}
+
+/* Modal Header */
+#orderModal .modal-content h3 {
+    margin-bottom: 15px;
+    text-align: center; /* Center align the header */
+    font-size: 18px; /* Moderate font size */
+    font-weight: bold; /* Emphasize the header */
+}
+
+/* Modal Details Content */
+#orderModal #modal-order-details p {
+    margin: 10px 0; /* Space between paragraphs */
+    font-size: 14px; /* Adjust font size for better readability */
+    line-height: 1.5; /* Improve text spacing */
+}
+
+/* Close Button Styling (Specific to Order Modal) */
+#orderModal .modal-content .close {
+    color: #aaa;
+    font-size: 24px; /* Adjust size for better visibility */
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* Menu Items */
+.menu-modal ul li {
+    margin: 5px 0; /* Reduced spacing between items */
+}
+
+/* Menu Modal Links Styled as Buttons */
+.menu-modal ul li a {
+    color: white; /* Text color */
+    background-color: #4CAF50; /* Green background */
+    text-decoration: none; /* Remove underline */
+    font-size: 14px; /* Smaller font size */
+    padding: 8px 16px; /* Reduced padding */
+    display: inline-block;
+    border: none; /* Remove border */
+    border-radius: 5px; /* Rounded corners */
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.menu-modal ul li a:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.menu-modal ul li a:active {
+    background-color: #3e8e41; /* Even darker green when clicked */
+}
+
+.modal-content .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    top: 10px;
+    right: 20px;
+}
+.modal-content .close:hover,
+.modal-content .close:focus {
+    color: #000;
+}
+
+
+
+/* Modal Content */
+.modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 500px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Subtle shadow effect */
+    text-align: left;
+    position: relative; /* Needed for absolute positioning of close button */
+    overflow-y: auto;
+}
+
+
+
+.modal-content .close:hover,
+.modal-content .close:focus {
+    color: #000;
+}
+
+/* Form Styling inside Modal */
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content form label {
+    margin: 10px 0 5px;
+    font-weight: bold;
+}
+
+.modal-content form input,
+.modal-content form select {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.modal-content form button {
+    padding: 10px;
+    background-color: #4CAF50; /* Green background */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.modal-content form button:hover {
+    background-color: #45a049; /* Darker green on hover */
+}
+
+.modal-content form button:active {
+    background-color: #3e8e41; /* Darker green when clicked */
+}
+
+/* Flash Messages Styling */
+.flash-messages {
+    margin-bottom: 20px;
+}
+
+.flash-messages .alert {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+
+
+
+.alert {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.form-container {
+    max-width: 600px;
+    margin: 20px auto 30px; /* Merge margin-top and margin-bottom */
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+
+.form-container label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-container input,
+.form-container select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+}
+
+.form-container button {
+    width: 100%;
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.form-container button:hover {
+    background-color: #45a049;
+}
+
+.form-container button:active {
+    background-color: #3e8e41;
+}
+
+/* Back button */
+.back-btn {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 20px;
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.back-btn:hover {
+    background-color: #e0e0e0;
+}
+
+
+
+
+
+/* Table styling */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+
+tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 14px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+button:active {
+    background-color: #3e8e41;
+}
+
+.back-to-dashboard {
+    display: block;
+    margin-top: 20px;
+    text-align: center;
+    color: #333;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.back-to-dashboard:hover {
+    text-decoration: underline;
+}
+
+/* Styling for the main menu page */
+.main-menu-container {
+
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+    margin-top: 30px;
+    text-align: center;
+}
+
+.main-menu-container h1 {
+    color: #4CAF50;
+    margin-bottom: 20px;
+}
+
+.main-menu-container ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.main-menu-container li {
+    margin: 10px 0;
+}
+
+.main-menu-container a.button {
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+}
+
+.main-menu-container a.button:hover {
+    background-color: #45a049;
+}
+
+.main-menu-container a.button:active {
+    background-color: #3e8e41;
+}
+
+/* Main container for the Database Entries page */
+.container {
+    width: 90%;
+    margin: 20px auto;
+    max-width: 1200px;
+    padding: 20px; /* Add padding around the content */
+    box-sizing: border-box; /* Ensure padding is included in width calculation */
+    height: auto; /* Ensure height is flexible */
+}
+
+
+
+.button:hover, .filter-bar button:hover {
+    background-color: #45a049;
+}
+
+
+tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+
+.actions a, .actions button {
+    padding: 6px 12px;
+    font-size: 14px;
+    text-decoration: none;
+    border-radius: 5px;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.actions a.edit {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.actions a.delete {
+    background-color: #f44336;
+    color: white;
+}
+
+.actions a:hover, .actions button:hover {
+    opacity: 0.8;
+}
+
+/* Filter bar styling for search and sort controls */
+.filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    gap: 10px;
+}
+
+.filter-bar input[type="text"] {
+    padding: 8px;
+    width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.filter-bar select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.record-counter {
+    margin-bottom: 10px;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+
+@media (max-width: 480px) {
+    /* Further adjustments for very small screens */
+    table, th, td {
+        font-size: 12px;
+    }
+
+    .container {
+        overflow: auto;
+    }
+
+    .actions a, .actions button {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+
+    .filter-bar input[type="text"], .filter-bar select {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    body {
+        margin: 0;
+    padding: 0;
+    height: 100vh; /* Full viewport height */
+    overflow: auto; /* Allow scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling for iOS */
+    }
+
+    .modal-content {
+        max-height: 80vh; /* Adjust for very small screens */
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .order-header {
+        white-space: normal; /* Allows text to wrap */
+        word-wrap: break-word; /* Wrap long unbroken text */
+        overflow-wrap: break-word; /* Wrap long words */
+        word-break: normal; /* Prevent breaking words unless necessary */
+        max-width: 100%; /* Ensure the container doesn't overflow */
+        display: block; /* Ensure the container is block-level and wraps text */
+    }
+
+}
+
+
+/* Adjustments for devices in landscape mode */
+@media (orientation: landscape) {
+    .container {
+        overflow: auto; /* Enable scrolling for both x and y axes */
+        width: 100%;
+        height: auto;
+    }
+
+    .modal-content {
+        max-width: 75%; /* Make modal smaller to fit better in landscape */
+        padding: 10px;
+    }
+
+    /* Ensure modals are scrollable */
+    .modal-content .modal-body {
+        max-height: 70vh; /* Allow scrolling inside modal if content is long */
+        overflow-y: auto;
+    }
+
+    /* Landscape mode adjustments */
+@media (orientation: landscape) {
+    .container {
+        overflow: auto; /* Allow scrolling for both x and y axes */
+        height: auto;
+    }
+
+    .modal-content {
+        max-width: 75%; /* Adjust modal size to fit landscape */
+        padding: 10px;
+    }
+
+    .table-container-wrapper {
+        position: relative;
+        margin-top: 40px;
+        height: 100%;
+    }
+
+    .fixed-header {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 1000;
+    }
+}
+}
+
+/* Adjust for iOS (for smooth scrolling behavior) */
+@supports (-webkit-overflow-scrolling: touch) {
+    .container {
+        -webkit-overflow-scrolling: touch; /* Enable smooth scrolling on iOS devices */
+    }
+
+    .modal-content {
+        -webkit-overflow-scrolling: touch; /* Enable smooth scrolling for modal */
+    }
+}
+
+/* Wrapper for table container and fixed header */
+.table-container-wrapper {
+    position: relative; /* To position the fixed header relative to this container */
+    margin-top: 40px; /* Adjust margin-top to move the table down if necessary */
+    height: 100%;
+}
+
+/* Fixed Header */
+.fixed-header {
+    position: sticky;
+    top: 0; /* Keep it at the top of the page */
+    background-color: #fff;
+    z-index: 1000; /* Ensure it's above the table content */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional shadow for better appearance */
+    width: 100%; /* Make sure header spans the entire width */
+}
+
+.fixed-header table {
+    width: 100%;  /* Ensure the table width is the same as the wrapper */
+    border-collapse: collapse;
+}
+
+
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    font-size: 16px;
+    text-align: left;
+}
+
+
+
+
+
+
+
+
+
+
+
+/* Scrollable Table Content */
+.scrollable-table {
+    overflow-y: auto; /* Enable vertical scrolling */
+    max-height: 400px; /* Set the max height for the scrollable area */
+}
+
+.actions a {
+    color: white;
+    padding: 6px 12px;
+    margin-right: 5px;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.actions a.edit {
+    background-color: #4CAF50;
+}
+
+.actions a.delete {
+    background-color: #f44336;
+}
+
+.actions a:hover {
+    opacity: 0.8;
+}
+
+.user-info {
+        text-align: center;
+        font-size: 16px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 10px; /* Add space between user info and the menu */
+    }
+

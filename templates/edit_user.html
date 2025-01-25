@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit User</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Edit User</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-messages">
+            {% for category, message in messages %}
+            <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <!-- Edit User Form -->
+        <form method="POST" class="form-container">
+            <label for="full_name">Full Name:</label>
+            <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required>
+
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" value="{{ user.username }}" required>
+
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" placeholder="Enter new password">
+
+            <label for="role">Role:</label>
+            <select name="role" id="role">
+                <option value="Storeworker" {% if user.role == 'Storeworker' %}selected{% endif %}>Storeworker</option>
+                <option value="Supervisor" {% if user.role == 'Supervisor' %}selected{% endif %}>Supervisor</option>
+                <option value="Admin" {% if user.role == 'Admin' %}selected{% endif %}>Admin</option>
+            </select>
+
+            <button type="submit" class="button">Update User</button>
+        </form>
+
+        <a href="{{ url_for('users') }}" class="button back-btn">Back to Users</a>
+    </div>
+</body>
+</html>

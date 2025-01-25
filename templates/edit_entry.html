@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Entry</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+        }
+
+        .form-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .form-container h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-container form label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .form-container form input,
+        .form-container form select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-container form button {
+            width: 100%;
+            background: #4CAF50;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .form-container form button:hover {
+            background: #45a049;
+        }
+
+        .form-container a {
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+            color: #4CAF50;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Edit Order</h1>
+        <form action="" method="POST">
+
+
+            <label>Clinic Name:</label>
+            <input type="text" name="clinic_name" value="{{ order['clinic_name'] }}" required>
+
+            <label>Clinic Address:</label>
+            <input type="text" name="clinic_address" value="{{ order['clinic_address'] }}" required>
+
+            <label>Description:</label>
+            <input type="text" name="description" value="{{ order['description'] }}">
+
+            <label>Lines:</label>
+            <input type="number" name="lines" value="{{ order['lines'] }}" required>
+
+            <label>Quantity:</label>
+            <input type="number" name="quantity" value="{{ order['quantity'] }}" required>
+
+            <label>Finalized By:</label>
+            <input type="text" name="finalized_by" value="{{ order['finalized_by'] }}" required>
+
+            <label>Carrier:</label>
+            <select name="carrier" required>
+                {% for carrier in carriers %}
+                <option value="{{ carrier['name'] }}" {% if order['carrier'] == carrier['name'] %}selected{% endif %}>
+                    {{ carrier['name'] }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <label>Category:</label>
+            <select name="category">
+                <option value="unallocated" {% if order['category'] == 'unallocated' %}selected{% endif %}>Unallocated</option>
+                <option value="misc" {% if order['category'] == 'misc' %}selected{% endif %}>Misc</option>
+                <option value="on_hold" {% if order['category'] == 'on_hold' %}selected{% endif %}>On Hold</option>
+                <option value="pick-ups" {% if order['category'] == 'pick-ups' %}selected{% endif %}>Pick-ups</option>
+                <option value="allocated" {% if order['category'] == 'allocated' %}selected{% endif %}>Allocated</option>
+            </select>
+
+            <label>Status:</label>
+            <select name="status">
+                <option value="new" {% if order['status'] == 'new' %}selected{% endif %}>New</option>
+                <option value="old" {% if order['status'] == 'old' %}selected{% endif %}>Old</option>
+                <option value="urgent" {% if order['status'] == 'urgent' %}selected{% endif %}>Urgent</option>
+                <option value="priority" {% if order['status'] == 'priority' %}selected{% endif %}>Priority</option>
+            </select>
+
+            <button type="submit">Save Changes</button>
+        </form>
+        <a href="/database">Back to Database Entries</a>
+    </div>
+</body>
+</html>

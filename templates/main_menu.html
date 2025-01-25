@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<style>
+  body {
+    display: flex;
+    justify-content: center;  /* Center content horizontally */
+    align-items: center;      /* Center content vertically */
+    height: 100vh;            /* Full viewport height */
+    margin: 0;                /* Remove default margin */
+    background-color: #f4f4f4; /* Optional: Set a background color */
+}
+</style>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Menu</title>
+<link rel="stylesheet" href="/static/styles.css"></head>
+<body>
+
+    <div class="main-menu-container">
+        <h1>Welcome to the Main Menu</h1>
+
+        <p>Choose an option to proceed:</p>
+
+        <ul>
+            <li><a href="/dashboard" class="button">Go to Dashboard</a></li>
+            <li><a href="/carriers" class="button">Manage Carriers</a></li>
+            <li><a href="/database" class="button">Manage Database Entries</a></li>
+            <li><a href="/manage_products" class="button">Manage Products</a></li>
+            <li><a href="/customers" class="button">Manage Customers</a></li>
+            {% if user_role == "Admin" %}
+                <li><a href="/users" class="button">Manage Users</a></li>
+                <li><a href="/list_of_html_files" class="button">List of Pages</a></li>
+                <li><a href="/record_template" class="button admin-button">Go to Record Template</a></li>
+
+            {% endif %}
+            <li><a href="{{ url_for('logout') }}" class="button">Logout</a></li>
+        </ul>
+    </div>
+</body>
+</html>

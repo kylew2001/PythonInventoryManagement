@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Product Database</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .table-container {
+            max-height: 650px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+        }
+
+        .header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding-top: 60px;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+        }
+
+        .close-btn {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            float: right;
+            cursor: pointer;
+        }
+
+        .delete-btn {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+        .edit-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .delete-btn:hover {
+            background-color: #952222;
+        }
+
+        .edit-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    {% include 'menu.html' %}
+
+    <header class="header">
+        <h1>Product Database</h1>
+    </header>
+
+    <div class="container">
+        <div class="filter-bar">
+            <form action="{{ url_for('view_products') }}" method="GET" style="display: flex; align-items: center; gap: 10px;">
+                <input type="text" name="search" placeholder="Search by Product Name..." value="{{ search_query }}">
+                <button type="submit" class="button">Search</button>
+            </form>
+            <!-- Add Product Button -->
+            <button id="openAddProductModal" class="button" style="margin-left: 10px;">Add Product</button>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Product Name</th>
+                        <th>Product Weight</th>
+                        <th>Weight Type</th>
+                        <th>Supplier</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if products %}
+                        {% for product in products %}
+                            <tr>
+                                <td>{{ product["product_id"] }}</td>
+<td>{{ product["product_name"] }}</td>
+<td>{{ product["product_weight"] }}</td>
+<td>{{ product["weight_type"] }}</td>
+<td>{{ product["supplier"] }}</td>
+<td>${{ product["price"] }}</td>
+
+                                <td>
+                                    <button class="edit-btn"
+        data-product-id="{{ product['product_id'] }}"
+        data-product-name="{{ product['product_name'] }}"
+        data-product-weight="{{ product['product_weight'] }}"
+        data-weight-type="{{ product['weight_type'] }}"
+        data-supplier="{{ product['supplier'] }}"
+        data-price="{{ product['price'] }}">Edit</button>
+                                    <button class="delete-btn" data-product-id="{{ product['Product ID'] }}">Delete</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7">No products found.</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" id="closeEditModal">&times;</span>
+        <h2>Edit Product</h2>
+        <form id="editProductForm" method="POST" action="/edit_product">
+            <input type="hidden" id="editProductId" name="product_id">
+
+            <label for="editProductName">Product Name:</label>
+            <input type="text" id="editProductName" name="product_name" required>
+
+            <label for="editProductWeight">Product Weight:</label>
+            <input type="number" step="0.01" id="editProductWeight" name="product_weight" required>
+
+            <label for="editWeightType">Weight Type:</label>
+            <select id="editWeightType" name="weight_type" required>
+                <option value="g">g (grams)</option>
+                <option value="Kg">Kg (kilograms)</option>
+                <option value="mL">mL (milliliters)</option>
+                <option value="L">L (liters)</option>
+            </select>
+
+            <label for="editSupplier">Supplier:</label>
+            <input type="text" id="editSupplier" name="supplier" required>
+
+            <label for="editPrice">Price:</label>
+            <input type="number" step="0.01" id="editPrice" name="price" required>
+
+            <button type="submit" class="button">Save Changes</button>
+        </form>
+    </div>
+</div>
+
+
+    <!-- Add Product Modal -->
+    <div id="addProductModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeAddProductModal">&times;</span>
+            <h2>Add Product</h2>
+            <form id="addProductForm" method="POST" action="/add_product">
+                <label for="addProductName">Product Name:</label>
+                <input type="text" id="addProductName" name="product_name" required><br><br>
+
+                <label for="addProductWeight">Product Weight:</label>
+                <input type="number" step="0.01" id="addProductWeight" name="product_weight" required><br><br>
+
+                <label for="addWeightType">Weight Type:</label>
+            <select id="addWeightType" name="weight_type" required>
+                <option value="" disabled selected>Select Weight Type</option>
+                <option value="g">g (grams)</option>
+                <option value="Kg">Kg (kilograms)</option>
+                <option value="mL">mL (milliliters)</option>
+                <option value="L">L (liters)</option>
+            </select><br><br>
+                <label for="addSupplier">Supplier:</label>
+                <input type="text" id="addSupplier" name="supplier" required><br><br>
+
+                <label for="addPrice">Price:</label>
+                <input type="number" step="0.01" id="addPrice" name="price" required><br><br>
+
+                <button type="submit" class="button">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Open Add Product Modal
+        const openAddProductModal = document.getElementById('openAddProductModal');
+        const addProductModal = document.getElementById('addProductModal');
+        const closeAddProductModal = document.getElementById('closeAddProductModal');
+
+        openAddProductModal.addEventListener('click', () => {
+            addProductModal.style.display = 'block';
+        });
+
+        closeAddProductModal.addEventListener('click', () => {
+            addProductModal.style.display = 'none';
+        });
+
+        // Close modal on outside click
+        window.addEventListener('click', (event) => {
+            if (event.target === addProductModal) {
+                addProductModal.style.display = 'none';
+            }
+        });
+
+        // Handle the Edit button click
+const editButtons = document.querySelectorAll('.edit-btn');
+editButtons.forEach(button => {
+    button.addEventListener('click', event => {
+        const product_id = button.getAttribute('data-product-id');
+        const productName = button.getAttribute('data-product-name');
+        const productWeight = button.getAttribute('data-product-weight');
+        const weightType = button.getAttribute('data-weight-type');
+        const supplier = button.getAttribute('data-supplier');
+        const price = button.getAttribute('data-price');
+
+        // Populate the edit modal fields
+        document.getElementById('editProductId').value = button.getAttribute('data-product-id');
+        document.getElementById('editProductName').value = button.getAttribute('data-product-name');
+        document.getElementById('editProductWeight').value = button.getAttribute('data-product-weight');
+        document.getElementById('editWeightType').value = button.getAttribute('data-weight-type');
+        document.getElementById('editSupplier').value = button.getAttribute('data-supplier');
+        document.getElementById('editPrice').value = button.getAttribute('data-price');
+        document.getElementById('editModal').style.display = 'block';
+
+        // Normalize case and set dropdown value
+        const dropdown = document.getElementById('editWeightType');
+        const options = Array.from(dropdown.options);
+        const matchingOption = options.find(option => option.value.toLowerCase() === weightType.toLowerCase());
+        if (matchingOption) {
+            dropdown.value = matchingOption.value;
+        } else {
+            dropdown.value = ""; // Fallback if no match
+        }
+
+        // Show the modal
+        document.getElementById('editModal').style.display = 'block';
+    });
+});
+
+        // Modal Close Button Logic
+        document.getElementById('closeEditModal').addEventListener('click', () => {
+            document.getElementById('editModal').style.display = 'none';
+        });
+
+        // Close modal on outside click
+        window.addEventListener('click', (event) => {
+            const modal = document.getElementById('editModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Handle the Delete button click
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', event => {
+            const productId = button.getAttribute('data-product-id'); // Fetch product ID from data attribute
+
+            if (confirm('Are you sure you want to delete this product?')) {
+                // Send a POST request to the delete_product route
+                fetch(`/delete_product/${productId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Product deleted successfully!');
+                        location.reload(); // Reload the page to reflect changes
+                    } else {
+                        alert('Failed to delete product.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        });
+    });
+    </script>
+</body>
+</html>
