@@ -12,16 +12,25 @@
     <div class="modal-content">
         <span class="close" onclick="toggleMenu()">&times;</span>
         <h2>Menu</h2>
-        <ul>
-            <li><a href="/dashboard">Dashboard</a></li>
-            <li><a href="/carriers">Carriers</a></li>
-            <li><a href="/customers">Customers</a></li>
-            <li><a href="/item_information">Item Information</a></li>
-            <li><a href="/confirm_order">Confirm Order</a></li>
+        <ul>{% if user_role in ["Customer", "Admin"] %}
+                <li><a href="/customer_menu" class="button customer-button">Customer Menu</a></li>
+                <li><a href="/customer_ordering" class="button customer-button">Customer Ordering</a></li>
+                <li><a href="/edit_customer_account" class="button customer-button">Edit Account</a></li>
+            {% endif %}
+
+            {% if user_role in ["Storeworker", "Supervisor", "Admin"] %}
+                <li><a href="/dashboard">Dashboard</a></li>
+            {% endif %}
+            {% if user_role in ["Supervisor", "Admin"] %}
+                <li><a href="/item_information" class="button supervisor-button">Item Information</a></li>
+            {% endif %}
+
             {% if user_role == "Admin" %}
+                <li><a href="/confirm_order" class="button admin-button">Confirm Order</a></li>
                 <li><a href="/users" class="button admin-button">Users</a></li>
+                <li><a href="/carriers" class="button admin-button">Carriers</a></li>
                 <li><a href="/list_of_html_files" class="button admin-button">List of HTML pages</a></li>
-            <li><a href="/product_database" class="button admin-button">Product Database</a></li>
+                <li><a href="/product_database" class="button admin-button">Product Database</a></li>
             {% endif %}
             <li><a href="{{ url_for('logout') }}">Logout</a></li>
         </ul>

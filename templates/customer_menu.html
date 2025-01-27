@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to the Customer Menu!</title>
+    <script src="/static/scripts.js" defer></script>
+    <link rel="stylesheet" href="/static/styles.css">
+
+    {% include 'menu.html' %}
 
     <style>
         body {
@@ -55,13 +59,13 @@
             font-size: 2.5rem;
         }
 
-        .button-container {
+        .customer-button-container {
             display: flex;
             justify-content: center;
             gap: 20px;
         }
 
-        .menu-button {
+        .customer-menu-button {
             background-color: #4CAF50;
             color: white;
             padding: 20px 40px;
@@ -75,26 +79,27 @@
             display: inline-block;
         }
 
-        .menu-button:hover {
+        .customer-menu-button:hover {
             background-color: #45a049;
             transform: scale(1.05);
         }
 
-        .menu-button:active {
+        .customer-menu-button:active {
             background-color: #3e8e41;
             transform: scale(1);
         }
     </style>
 </head>
 <body>
+
     <div class="header">
         Logged in as: {{logged_in_user}}
         <button class="logout-button" onclick="location.href='/logout'">Logout</button>
     </div>
     <h1>Customer Menu</h1>
-    <div class="button-container">
-        <a href="/customer_ordering" class="menu-button">Customer Ordering</a>
-        <a href="/edit_customer_account" class="menu-button">Edit Customer Account</a>
+    <div class="customer-button-container">
+        <a href="/customer_ordering" class="customer-menu-button">Customer Ordering</a>
+        <a href="/edit_customer_account" class="customer-menu-button">Edit Customer Account</a>
     </div>
 </body>
 </html>

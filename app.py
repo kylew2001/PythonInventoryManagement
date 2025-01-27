@@ -88,7 +88,7 @@ def login():
             if user["role"] == "Admin":
                 return redirect(url_for("dashboard"))  # Example route for Admin
             elif user["role"] == "Storeworker":
-                return redirect(url_for("main_menu"))
+                return redirect(url_for("dashboard"))
             else:
                 return redirect(url_for("dashboard"))  # Default fallback
         else:
@@ -127,6 +127,32 @@ def customer_login():
 
     return render_template("login.html")
 
+@app.context_processor
+def inject_user_details():
+    user_role = None
+    priority_customer = False
+
+    # For customers
+    if "customer_id" in session:
+        conn = get_db_connection()
+        customer = conn.execute(
+            "SELECT clinic_username, priority_customer FROM customer_account WHERE id = ?",
+            (session["customer_id"],)
+        ).fetchone()
+        conn.close()
+        if customer:
+            user_role = "Customer"
+            priority_customer = bool(customer["priority_customer"])
+
+    # For other user types
+    elif "user_id" in session:
+        conn = get_db_connection()
+        user = conn.execute("SELECT role FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+        conn.close()
+        if user:
+            user_role = user["role"]
+
+    return {"user_role": user_role, "priority_customer": priority_customer}
 
 
 @app.context_processor
@@ -147,15 +173,6 @@ def inject_logged_in_user():
     return {"logged_in_user": user_name}
 
 
-@app.context_processor
-def inject_user_role():
-    if "user_id" in session:
-        conn = get_db_connection()
-        user = conn.execute("SELECT role FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-        conn.close()
-        print(f"User role: {user['role'] if user else None}")  # Debugging print
-        return {"user_role": user["role"] if user else None}
-    return {"user_role": None}
 
 
 
@@ -171,10 +188,23 @@ def logout():
 # region Dashboard
 @app.route("/dashboard")
 def dashboard():
+    # Ensure the user is logged in
     if "user_id" not in session:
         flash("You need to log in to access the dashboard.", "warning")
         return redirect(url_for("login"))
 
+    # Check user role
+    conn = get_db_connection()
+    user = conn.execute("SELECT role FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    conn.close()
+
+    # Allow access only for storeworkers, supervisors, and admins
+    allowed_roles = ["Storeworker", "Supervisor", "Admin"]
+    if user and user["role"] not in allowed_roles:
+        flash("Access restricted. You do not have permission to view this page.", "danger")
+        return redirect(url_for("main_menu"))  # Redirect to the main menu or login page
+
+    # Fetch dashboard data
     conn = get_db_connection()
     orders = conn.execute("""
         SELECT 
@@ -310,12 +340,13 @@ def add_user():
         full_name = request.form["full_name"]
         username = request.form["username"]
         password = request.form["password"]
+        role = request.form["role"]  # Get the selected role from the form
         hashed_password = generate_password_hash(password)
 
         try:
-            # Insert the user into the database with full name, username, password hash, and default role
+            # Insert the user into the database with full name, username, password hash, and selected role
             query_db("INSERT INTO users (full_name, username, password_hash, role) VALUES (?, ?, ?, ?)",
-                     (full_name, username, hashed_password, 'Storeworker'))
+                     (full_name, username, hashed_password, role))
             flash("User created successfully!", "success")
             return redirect(url_for("users"))  # Redirect to users page after creation
         except sqlite3.IntegrityError:
@@ -471,37 +502,7 @@ def database_entries():
     )
 
 # Route: Add New Entry
-@app.route('/add_entry', methods=['POST'])
-def add_entry():
-    description = request.form.get('description')  # Optional field
-    lines = request.form['lines']
-    quantity = request.form['quantity']
-    clinic_name = request.form['clinic_name']
-    clinic_address = request.form['clinic_address']
-    finalized_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Get current time
-    finalized_by = request.form['finalized_by']
-    carrier = request.form['carrier']
-    category = request.form.get('category', 'unallocated')  # Default to unallocated
-    urgent = request.form.get('urgent')  # Checkbox value
-    priority = request.form.get('priority')  # Checkbox value
 
-    # Determine status dynamically
-    status = "new"  # Default
-    if urgent:
-        status = "urgent"
-    elif priority:
-        status = "priority"
-    elif datetime.strptime(finalized_time, '%Y-%m-%d %H:%M:%S') < datetime.now() - timedelta(hours=3):
-        status = "old"
-
-    conn = get_db_connection()
-    conn.execute(
-        'INSERT INTO orders (description, lines, quantity, clinic_name, clinic_address, finalized_time, finalized_by, carrier, category, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        (description, lines, quantity, clinic_name, clinic_address, finalized_time, finalized_by, carrier, category, status)
-    )
-    conn.commit()
-    conn.close()
-    return redirect('/database')
 
 
 # Route: Fetch Order Details for Modal
@@ -550,70 +551,9 @@ def get_order_items(order_id):
 
 
 # Route: Update Order Status
-@app.route('/update_order_status', methods=['POST'])
-def update_order_status():
-    data = request.json
-    order_id = data['order_id']
-    new_status = data['status']
 
-    conn = get_db_connection()
-    conn.execute('UPDATE orders SET status = ? WHERE order_id = ?', (new_status, order_id))
-    conn.commit()
-    conn.close()
-    return jsonify({"message": "Order status updated successfully"})
-@app.route('/edit_entry/<int:order_id>', methods=['GET', 'POST'])
-def edit_entry(order_id):
-    conn = get_db_connection()
 
-    if request.method == 'POST':
-        description = request.form.get('description')
-        lines = request.form['lines']
-        quantity = request.form['quantity']
-        clinic_name = request.form['clinic_name']
-        clinic_address = request.form['clinic_address']
-        finalized_by = request.form['finalized_by']
-        carrier = request.form['carrier']
-        category = request.form['category']
-        status = request.form['status']
 
-        conn.execute(
-            'UPDATE orders SET description = ?, lines = ?, quantity = ?, clinic_name = ?, clinic_address = ?, finalized_by = ?, carrier = ?, category = ?, status = ? WHERE order_id = ?',
-            (description, lines, quantity, clinic_name, clinic_address, finalized_by, carrier, category, status, order_id)
-        )
-        conn.commit()
-        conn.close()
-        return redirect('/database')
-
-    # Fetch current order and available carriers
-    order = conn.execute('SELECT * FROM orders WHERE order_id = ?', (order_id,)).fetchone()
-    carriers = conn.execute('SELECT name FROM carriers').fetchall()
-    conn.close()
-
-    return render_template('edit_entry.html', order=order, carriers=carriers)
-
-@app.route('/delete_entry/<int:order_id>')
-def delete_entry(order_id):
-    conn = get_db_connection()
-    conn.execute('DELETE FROM orders WHERE order_id = ?', (order_id,))
-    conn.commit()
-    conn.close()
-    return redirect('/database')
-
-@app.route('/update_order', methods=['POST'])
-def update_order():
-    data = request.json
-    order_id = data.get('order_id')
-    new_category = data.get('category')
-
-    if not order_id or not new_category:
-        return jsonify({'error': 'Missing order_id or category'}), 400
-
-    conn = get_db_connection()
-    conn.execute('UPDATE orders SET category = ? WHERE order_id = ?', (new_category, order_id))
-    conn.commit()
-    conn.close()
-
-    return jsonify({'success': True, 'message': f'Order {order_id} updated to category {new_category}.'})
 
 #endregion
 
@@ -1210,22 +1150,46 @@ def submit_order():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    clinic = cursor.execute("SELECT clinic_name, clinic_address, preferred_carrier FROM customer_account WHERE id = ?", (clinic_id,)).fetchone()
+    # Fetch the clinic information and category from customer_account
+    clinic = cursor.execute("""
+        SELECT clinic_name, clinic_address, clinic_category, preferred_carrier 
+        FROM customer_account 
+        WHERE id = ?
+    """, (clinic_id,)).fetchone()
+
     if not clinic:
         return jsonify({"error": "Customer account not found"}), 404
 
-    clinic_name, clinic_address, preferred_carrier = clinic
+    clinic_name, clinic_address, clinic_category, preferred_carrier = clinic
     cart = data['cart']
 
     total_quantity = sum(item['quantity'] for item in cart)
     lines = len(cart)
 
-    cursor.execute("""
-        INSERT INTO orders (clinic_name, clinic_address, category, status, quantity, lines, finalized_time, order_confirmed, carrier)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (clinic_name, clinic_address, "new", "Pending", total_quantity, lines, datetime.now(), "Pending", preferred_carrier))
+    # Ensure the category matches the customer's clinic_category
+    category = clinic_category
 
+    # Insert the order with correct category, status, and default order_confirmed
+    cursor.execute("""
+        INSERT INTO orders (
+            clinic_name, clinic_address, category, status, quantity, lines, finalized_time, order_confirmed, carrier
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        clinic_name,
+        clinic_address,
+        category,  # Use the clinic's category
+        "new",  # Set status to "new"
+        total_quantity,
+        lines,
+        datetime.now(),
+        "Pending",  # Default for order_confirmed
+        preferred_carrier
+    ))
+
+    # Get the order_id of the newly inserted order
     order_id = cursor.lastrowid
+
+    # Insert items into the order_items table
     for item in cart:
         cursor.execute("""
             INSERT INTO order_items (order_id, item_name, quantity)
@@ -1302,6 +1266,73 @@ def edit_customer_account(customer_id):
 
     return render_template("edit_customer_account.html", customer=customer, carriers=carriers)
 
+
+@app.route('/update_order_status', methods=['POST'])
+def update_order_status():
+    print("Request received at /update_order_status")
+    data = request.json
+    order_id = data.get('order_id')
+    new_status = data.get('status')
+
+    if not order_id or not new_status:
+        return jsonify({"error": "Missing order_id or status in the request."}), 400
+
+    valid_statuses = ['new', 'old', 'priority', 'urgent']
+    if new_status not in valid_statuses:
+        return jsonify({"error": f"Invalid status '{new_status}' provided."}), 400
+
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            'UPDATE orders SET status = ? WHERE order_id = ?',
+            (new_status, order_id)
+        )
+        conn.commit()
+        return jsonify({"message": f"Order status updated to '{new_status}' successfully."})
+    except sqlite3.Error as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+
+
+
+
+@app.route('/update_order', methods=['POST'])
+def update_order():
+    data = request.json
+    print(f"Received data in /update_order: {data}")  # Debugging log
+
+    order_id = data.get('order_id')
+    new_category = data.get('category')
+
+    # Validate inputs
+    if not order_id or not new_category:
+        print("Error: Missing order_id or category")  # Debugging log
+        return jsonify({'error': 'Missing order_id or category in the request.'}), 400
+
+    valid_categories = ['new', 'old', 'priority', 'urgent', 'unallocated', 'misc', 'on_hold', 'pick-ups', 'Van', '9:30', '11:30', '1:30', '3:30', '5:30']
+    if new_category not in valid_categories:
+        print(f"Invalid category '{new_category}'")  # Debugging log
+        return jsonify({'error': f"Invalid category '{new_category}'. Must be one of {valid_categories}."}), 400
+
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            'UPDATE orders SET category = ? WHERE order_id = ?',
+            (new_category, order_id)
+        )
+        conn.commit()
+        print(f"Order {order_id} updated to category '{new_category}'")  # Debugging log
+        return jsonify({'success': True, 'message': f"Order {order_id} updated to category '{new_category}'."})
+    except sqlite3.Error as e:
+        print(f"Database error: {str(e)}")  # Debugging log
+        return jsonify({'error': f"Database error: {str(e)}"}), 500
+    finally:
+        conn.close()
+
+
+
 #endregion
 
 #region Order Confirmation
@@ -1339,36 +1370,69 @@ def get_pending_orders():
     orders = [dict(row) for row in pending_orders]
     return jsonify(orders)
 
+@app.route('/confirm_order')
+def confirm_order_page():
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        flash("Access restricted to admins only.", "danger")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    pending_orders = conn.execute("""
+        SELECT 
+            o.order_id, 
+            o.clinic_name, 
+            o.category, 
+            o.lines, 
+            o.quantity, 
+            SUM(oi.quantity * p.price) AS total_price
+        FROM orders o
+        LEFT JOIN order_items oi ON o.order_id = oi.order_id
+        LEFT JOIN products p ON oi.item_name = p.product_name
+        WHERE o.order_confirmed = 'Pending'
+        GROUP BY o.order_id
+        ORDER BY o.finalized_time DESC
+    """).fetchall()
+    conn.close()
+
+    print(pending_orders)  # Debugging: Check the data
+
+    # Convert rows to dictionaries for Jinja2 rendering
+    orders = [dict(order) for order in pending_orders]
+    print(orders)  # Debugging: Ensure orders is a list of dictionaries
+
+    return render_template("confirm_order.html", orders=orders)
 
 
 
 @app.route('/confirm_order_status', methods=['POST'])
 def confirm_order_status():
+    print("Request received at /confirm_order_status")
     if "user_id" not in session or session.get("user_role") != "Admin":
         return jsonify({"error": "Access restricted to admins only."}), 403
 
     data = request.json
+    print(f"Received data in /confirm_order_status: {data}")  # Debugging log
     order_id = data.get('order_id')
-    new_status = data.get('status')
+    new_confirmation_status = data.get('status')
 
-    if new_status not in ['Confirmed', 'Rejected']:
-        return jsonify({"error": "Invalid status."}), 400
+    if new_confirmation_status not in ['Confirmed', 'Rejected']:
+        print(f"Invalid confirmation status: {new_confirmation_status}")  # Debugging log
+        return jsonify({"error": "Invalid confirmation status."}), 400
 
-    # Retrieve the current logged-in user's username
     conn = get_db_connection()
-    user = conn.execute("SELECT username FROM users WHERE id = ?", (session["user_id"],)).fetchone()
-    username = user["username"] if user else "Unknown"
-
-    # Update the order's confirmation status and finalized_by field
-    conn.execute("""
-        UPDATE orders
-        SET order_confirmed = ?, finalized_by = ?
-        WHERE order_id = ?
-    """, (new_status, username, order_id))
-    conn.commit()
-    conn.close()
-
-    return jsonify({"message": f"Order {order_id} has been {new_status.lower()}."})
+    try:
+        # Update the order's confirmation status and finalized_by field
+        conn.execute("""
+            UPDATE orders
+            SET order_confirmed = ?, finalized_by = ?
+            WHERE order_id = ?
+        """, (new_confirmation_status, session.get("user_id"), order_id))
+        conn.commit()
+        return jsonify({"message": f"Order {order_id} has been {new_confirmation_status.lower()}."})
+    except sqlite3.Error as e:
+        return jsonify({"error": f"Database error: {str(e)}"}), 500
+    finally:
+        conn.close()
 
 
 #endregion

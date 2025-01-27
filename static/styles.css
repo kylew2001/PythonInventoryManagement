@@ -367,6 +367,31 @@ ul li a.button.admin-button:active {
     background-color: #5c2323 !important; /* Even darker red when clicked */
 }
 
+ul li a.button.supervisor-button {
+    background-color: #a6ac15 !important; /* Red background */
+    margin: 5px 0; /* Specific margin for admin links */
+}
+
+ul li a.button.supervisor-button:hover {
+    background-color: #7a8117 !important; /* Darker red on hover */
+}
+
+ul li a.button.supervisor-button:active {
+    background-color: #7a8117 !important; /* Even darker red when clicked */
+}
+
+ul li a.button.customer-button {
+    background-color: #15ac7f !important; /* Red background */
+    margin: 5px 0; /* Specific margin for admin links */
+}
+
+ul li a.button.customer-button:hover {
+    background-color: #0c6a4e !important; /* Darker red on hover */
+}
+
+ul li a.button.customer-button:active {
+    background-color: #0c6a4e !important; /* Even darker red when clicked */
+}
 
 
 

@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS orders (
     finalized_by TEXT,
     carrier TEXT,
     category TEXT DEFAULT 'unallocated', -- unallocated, misc, on_hold, pick-ups, allocated
-    status TEXT, -- new, old, urgent, priority
+    status TEXT DEFAULT 'new', -- new, old, urgent, priority
     allocated_to INTEGER,
     order_confirmed TEXT CHECK(order_confirmed IN ('Pending', 'Confirmed', 'Rejected')) DEFAULT 'Pending'
 );

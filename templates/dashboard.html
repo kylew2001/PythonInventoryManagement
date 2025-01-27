@@ -162,38 +162,41 @@
         });
 
         column.addEventListener('drop', async (e) => {
-            e.preventDefault();
+    e.preventDefault();
 
-            // Prevent dropping into "Allocated" column
-            if (column.id === 'allocated') {
-                alert("You cannot move orders directly to the Allocated section.");
-                return;
-            }
+    if (column.id === 'allocated') {
+        alert("You cannot move orders directly to the Allocated section.");
+        return;
+    }
 
-            const orderId = e.dataTransfer.getData('text/plain'); // Get the dragged order ID
-            const orderDiv = document.querySelector(`.order[data-id="${orderId}"]`);
-            column.appendChild(orderDiv); // Move the order to the new column visually
+    const orderId = e.dataTransfer.getData('text/plain');
+    console.log('Dragged Order ID:', orderId); // Debugging: Log order ID
 
-            // Update the backend to reflect the new category
-            const newCategory = column.id;
-            try {
-                const response = await fetch(`/update_order`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ order_id: orderId, category: newCategory })
-                });
+    const orderDiv = document.querySelector(`.order[data-id="${orderId}"]`);
+    column.appendChild(orderDiv);
 
-                if (!response.ok) {
-                    throw new Error('Failed to update the order category in the database.');
-                }
+    const newCategory = column.id;
+    console.log('New Category:', newCategory); // Debugging: Log new category
 
-                const result = await response.json();
-                console.log('Database update successful:', result);
-            } catch (error) {
-                console.error('Error updating order category:', error);
-                alert('There was a problem updating the order in the database.');
-            }
+    try {
+        const response = await fetch(`/update_order`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId, category: newCategory })
         });
+
+        if (!response.ok) {
+            throw new Error('Failed to update the order category in the database.');
+        }
+
+        const result = await response.json();
+        console.log('Database update successful:', result);
+    } catch (error) {
+        console.error('Error updating order category:', error);
+        alert('There was a problem updating the order in the database.');
+    }
+});
+
     });
 
     // Add Drag Start Listener

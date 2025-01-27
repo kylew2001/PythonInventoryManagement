@@ -85,74 +85,127 @@
                 </tr>
             </thead>
             <tbody id="ordersTable">
-                <tr><td colspan="7">Loading orders...</td></tr>
-            </tbody>
+    {% if orders %}
+        {% for order in orders %}
+        <tr>
+            <td>{{ order.order_id }}</td>
+            <td>{{ order.clinic_name }}</td>
+            <td>{{ order.category }}</td>
+            <td>{{ order.lines }}</td>
+            <td>{{ order.quantity }}</td>
+            <td>${{ "%.2f"|format(order.total_price) }}</td>
+            <td>
+                <button class="confirm-btn" onclick="confirmOrder({{ order.order_id }}, 'Confirmed')">Confirm</button>
+                <button class="reject-btn" onclick="confirmOrder({{ order.order_id }}, 'Rejected')">Reject</button>
+            </td>
+        </tr>
+        {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="7">No pending orders found.</td>
+        </tr>
+    {% endif %}
+</tbody>
+
+
+
         </table>
     </main>
 
     <script>
     // Fetch and display pending orders
     function fetchPendingOrders() {
-        fetch('/get_pending_orders')
-            .then(response => response.json())
-            .then(orders => {
-                const ordersTable = document.getElementById('ordersTable');
-                ordersTable.innerHTML = ''; // Clear existing rows
-
-                if (orders.error) {
-                    ordersTable.innerHTML = `<tr><td colspan="7">${orders.error}</td></tr>`;
-                    return;
-                }
-
-                if (orders.length === 0) {
-                    ordersTable.innerHTML = '<tr><td colspan="7">No pending orders.</td></tr>';
-                    return;
-                }
-
-                orders.forEach(order => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${order.order_id}</td>
-                        <td>${order.clinic_name}</td>
-                        <td>${order.category}</td>
-                        <td>${order.lines}</td>
-                        <td>${order.quantity}</td>
-                        <td>$${order.total_price.toFixed(2)}</td>
-                        <td>
-                            <button class="confirm-btn" onclick="updateOrderStatus(${order.order_id}, 'Confirmed')">Confirm</button>
-                            <button class="reject-btn" onclick="updateOrderStatus(${order.order_id}, 'Rejected')">Reject</button>
-                        </td>
-                    `;
-                    ordersTable.appendChild(row);
-                });
-            })
-            .catch(error => {
-                console.error('Error fetching orders:', error);
-                const ordersTable = document.getElementById('ordersTable');
-                ordersTable.innerHTML = '<tr><td colspan="7">Error loading orders. Please try again later.</td></tr>';
-            });
-    }
-
-    // Update order status
-    function updateOrderStatus(orderId, status) {
-        fetch('/confirm_order_status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ order_id: orderId, status: status })
-        })
+    fetch('/get_pending_orders')
         .then(response => response.json())
-        .then(data => {
-            alert(data.message || 'Order status updated.');
-            fetchPendingOrders(); // Refresh the table
+        .then(orders => {
+            const ordersTable = document.getElementById('ordersTable');
+            ordersTable.innerHTML = ''; // Clear existing rows
+
+            if (!orders || orders.length === 0) {
+                ordersTable.innerHTML = '<tr><td colspan="7">No pending orders found.</td></tr>';
+                return;
+            }
+
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.order_id}</td>
+                    <td>${order.clinic_name}</td>
+                    <td>${order.category}</td>
+                    <td>${order.lines}</td>
+                    <td>${order.quantity}</td>
+                    <td>$${order.total_price.toFixed(2)}</td>
+                    <td>
+                        <button class="confirm-btn" onclick="confirmOrder(${order.order_id}, 'Confirmed')">Confirm</button>
+                        <button class="reject-btn" onclick="confirmOrder(${order.order_id}, 'Rejected')">Reject</button>
+                    </td>
+                `;
+                ordersTable.appendChild(row);
+            });
         })
         .catch(error => {
-            console.error('Error updating order status:', error);
-            alert('Failed to update order status. Please try again.');
+            console.error('Error fetching orders:', error);
+            const ordersTable = document.getElementById('ordersTable');
+            ordersTable.innerHTML = '<tr><td colspan="7">Error loading orders. Please try again later.</td></tr>';
         });
-    }
+}
+
+
+    // Update order status
+    function updateOrderStatus(orderId, newStatus) {
+    fetch('/update_order_status', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            order_id: orderId,
+            status: newStatus,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            console.log(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('There was a problem updating the order.');
+    });
+}
+
 
     // Fetch pending orders on page load
-    document.addEventListener('DOMContentLoaded', fetchPendingOrders);
+
+    // Confirm or Reject order
+function confirmOrder(orderId, newStatus) {
+    fetch('/confirm_order_status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            order_id: orderId,
+            status: newStatus,
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert(data.message);
+            // Optionally refresh the orders
+            fetchPendingOrders();
+        }
+    })
+    .catch(error => {
+        console.error('Error confirming order:', error);
+        alert('Failed to confirm order.');
+    });
+}
+
 </script>
 
 </body>
