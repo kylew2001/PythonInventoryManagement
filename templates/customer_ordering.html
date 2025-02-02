@@ -26,150 +26,164 @@
             </section>
 
             <!-- Order Section -->
-            <section class="order-section">
+<section class="order-section">
     <h2>Your Order</h2>
-                <div id="orderWrapper">
-    <table>
-        <thead>
-            <tr>
-                <th>Product Name</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Total</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="cart">
-            <tr><td colspan="5">No items in the cart.</td></tr> <!-- Placeholder for empty cart -->
-        </tbody>
-    </table>
-                </div>
+    <div id="orderWrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Qty</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="cart">
+                <tr><td colspan="5">No items in the cart.</td></tr> <!-- Placeholder for empty cart -->
+            </tbody>
+        </table>
+    </div>
+    <div class="order-options">
+        <label for="urgentCheckbox">
+            <input type="checkbox" id="urgentCheckbox">
+            Mark order as urgent
+        </label>
+        <label for="orderDescription">
+            Description:
+            <textarea id="orderDescription" placeholder="Enter order description" rows="3"></textarea>
+        </label>
+    </div>
     <button class="submit-btn" onclick="submitOrder()">Submit Order</button>
 </section>
+
         </div>
     </main>
 <script>
   // Search products
-function searchProducts() {
-    const query = document.getElementById('searchQuery').value;
-    if (!query.trim()) {
-        document.getElementById('searchResults').innerHTML = '<p>No results found.</p>';
-        return;
-    }
+  function searchProducts() {
+      const query = document.getElementById('searchQuery').value;
+      if (!query.trim()) {
+          document.getElementById('searchResults').innerHTML = '<p>No results found.</p>';
+          return;
+      }
 
-    fetch(`/search_products?query=${query}`)
-        .then(response => response.json())
-        .then(products => {
-            const searchResults = document.getElementById('searchResults');
-            searchResults.innerHTML = ''; // Clear previous results
+      fetch(`/search_products?query=${query}`)
+          .then(response => response.json())
+          .then(products => {
+              const searchResults = document.getElementById('searchResults');
+              searchResults.innerHTML = ''; // Clear previous results
 
-            if (products.length === 0) {
-                searchResults.innerHTML = '<p>No results found.</p>';
-            } else {
-                products.forEach(product => {
-                    const div = document.createElement('div');
-                    div.classList.add('product-result');
-                    div.innerHTML = `
-                        <p><strong>${product.product_name}</strong> - $${product.price.toFixed(2)}</p>
-                        <input type="number" id="qty_${product.product_id}" min="1" placeholder="Qty">
-                        <button onclick="addToCart(${product.product_id}, '${product.product_name}', ${product.price})">Add to Order</button>
-                    `;
-                    searchResults.appendChild(div);
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error fetching products:', error);
-        });
-}
+              if (products.length === 0) {
+                  searchResults.innerHTML = '<p>No results found.</p>';
+              } else {
+                  products.forEach(product => {
+                      const div = document.createElement('div');
+                      div.classList.add('product-result');
+                      div.innerHTML = `
+                          <p><strong>${product.product_name}</strong> - $${product.price.toFixed(2)}</p>
+                          <input type="number" id="qty_${product.product_id}" min="1" placeholder="Qty">
+                          <button onclick="addToCart(${product.product_id}, '${product.product_name}', ${product.price})">Add to Order</button>
+                      `;
+                      searchResults.appendChild(div);
+                  });
+              }
+          })
+          .catch(error => {
+              console.error('Error fetching products:', error);
+          });
+  }
 
-let cart = []; // Global cart array to hold items
+  let cart = []; // Global cart array to hold items
 
-// Add item to cart
-function addToCart(productId, productName, price) {
-    const quantity = parseInt(document.getElementById(`qty_${productId}`).value);
+  // Add item to cart
+  function addToCart(productId, productName, price) {
+      const quantity = parseInt(document.getElementById(`qty_${productId}`).value);
+      if (!quantity || quantity <= 0) {
+          alert("Please enter a valid quantity.");
+          return;
+      }
 
-    if (!quantity || quantity <= 0) {
-        alert("Please enter a valid quantity.");
-        return;
-    }
+      // Check if item already exists in the cart
+      const existingItem = cart.find(item => item.productId === productId);
+      if (existingItem) {
+          existingItem.quantity += quantity;
+          existingItem.totalPrice = existingItem.quantity * existingItem.price;
+      } else {
+          cart.push({
+              productId,
+              productName,
+              quantity,
+              price,
+              totalPrice: quantity * price
+          });
+      }
 
-    // Check if item already exists in the cart
-    const existingItem = cart.find(item => item.productId === productId);
-    if (existingItem) {
-        existingItem.quantity += quantity;
-        existingItem.totalPrice = existingItem.quantity * existingItem.price;
-    } else {
-        cart.push({
-            productId,
-            productName,
-            quantity,
-            price,
-            totalPrice: quantity * price
-        });
-    }
+      updateCartDisplay();
+  }
 
-    updateCartDisplay();
-}
+  // Update the "Your Order" section
+  function updateCartDisplay() {
+      const cartTable = document.getElementById('cart');
+      cartTable.innerHTML = ''; // Clear the current cart display
 
-// Update the "Your Order" section
-function updateCartDisplay() {
-    const cartTable = document.getElementById('cart');
-    cartTable.innerHTML = ''; // Clear the current cart display
+      if (cart.length === 0) {
+          cartTable.innerHTML = '<tr><td colspan="5">No items in the cart.</td></tr>';
+          return;
+      }
 
-    if (cart.length === 0) {
-        cartTable.innerHTML = '<tr><td colspan="5">No items in the cart.</td></tr>';
-        return;
-    }
+      cart.forEach((item, index) => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+              <td>${item.productName}</td>
+              <td>${item.quantity}</td>
+              <td>$${item.price.toFixed(2)}</td>
+              <td>$${item.totalPrice.toFixed(2)}</td>
+              <td><button onclick="removeCartItem(${index})">Remove</button></td>
+          `;
+          cartTable.appendChild(row);
+      });
+  }
 
-    cart.forEach((item, index) => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${item.productName}</td>
-            <td>${item.quantity}</td>
-            <td>$${item.price.toFixed(2)}</td>
-            <td>$${item.totalPrice.toFixed(2)}</td>
-            <td><button onclick="removeCartItem(${index})">Remove</button></td>
-        `;
-        cartTable.appendChild(row);
-    });
-}
+  // Remove item from the cart
+  function removeCartItem(index) {
+      cart.splice(index, 1); // Remove item from the cart array
+      updateCartDisplay(); // Refresh the cart display
+  }
 
-// Remove item from the cart
-function removeCartItem(index) {
-    cart.splice(index, 1); // Remove item from the cart array
-    updateCartDisplay(); // Refresh the cart display
-}
+  // Submit order (fixed - single definition)
+  function submitOrder() {
+      if (cart.length === 0) {
+          alert("Your cart is empty.");
+          return;
+      }
 
-// Submit order
-function submitOrder() {
-    if (cart.length === 0) {
-        alert("Your cart is empty.");
-        return;
-    }
-
-    fetch('/submit_order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart })
-    })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-                cart = []; // Clear the cart after successful submission
-                updateCartDisplay();
-            } else {
-                alert("Failed to submit the order.");
-            }
-        })
-        .catch(error => {
-            console.error("Error submitting order:", error);
-        });
-}
+      // Read the urgent checkbox value:
+      let urgent = document.getElementById('urgentCheckbox').checked;
+      // Read the order description
+      let description = document.getElementById('orderDescription').value;
 
 
+      fetch('/submit_order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cart, urgent: urgent, description: description })  // include the urgent flag
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.message) {
+              alert(data.message);
+              window.location.reload();
+          } else {
+              alert("Failed to submit the order.");
+          }
+      })
+      .catch(error => {
+          console.error("Error submitting order:", error);
+      });
+  }
 </script>
+
 
 </body>
 </html>

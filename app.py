@@ -39,6 +39,12 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+
 # Helper function to query the database
 def query_db(query, args=(), one=False):
     with sqlite3.connect("database.db") as conn:
@@ -211,7 +217,8 @@ def dashboard():
             o.*,
             ca.priority_customer,
             DATETIME(o.finalized_time, '+3 hours') > DATETIME('now') AS is_new,
-            o.finalized_by
+            o.finalized_by,
+            COALESCE(ca.preferred_carrier, o.carrier) AS carrier
         FROM orders o
         LEFT JOIN customer_account ca 
         ON o.clinic_name = ca.clinic_name
@@ -546,6 +553,7 @@ def get_order_items(order_id):
         "category": order["category"],
         "status": order["status"],
         "priority_customer": bool(order["priority_customer"]),
+        "description": order["description"],
         "items": [dict(item) for item in items]
     })
 
@@ -553,6 +561,106 @@ def get_order_items(order_id):
 # Route: Update Order Status
 
 
+
+
+#endregion
+
+#region Order Records
+
+# ***** ORDER RECORDS VIEW (Admin only) *****
+@app.route("/order_records", methods=["GET"])
+def order_records():
+    # Ensure only admin users access this page.
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        flash("Access restricted to admins only.", "danger")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    # Get search parameters: search_field and search_value from query string.
+    search_field = request.args.get("search_field", "")
+    search_value = request.args.get("search_value", "")
+    base_query = "SELECT * FROM orders"
+    params = []
+    if search_field and search_value:
+        # Allowed search fields (columns) – adjust as needed.
+        allowed_fields = ["description", "lines", "quantity", "clinic_name", "clinic_address",
+                          "finalized_time", "finalized_by", "carrier", "category", "status",
+                          "allocated_to", "order_confirmed"]
+        if search_field not in allowed_fields:
+            flash("Invalid search field.", "danger")
+            return redirect(url_for("order_records"))
+        base_query += " WHERE {} LIKE ?".format(search_field)
+        params.append(f"%{search_value}%")
+
+    orders = conn.execute(base_query, params).fetchall()
+    total_records = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
+    filtered_count = len(orders)
+    conn.close()
+
+    return render_template("order_records.html",
+                           orders=[dict(o) for o in orders],
+                           search_field=search_field,
+                           search_value=search_value,
+                           total_records=total_records,
+                           filtered_count=filtered_count)
+
+
+# ***** EDIT ORDER (AJAX endpoint) *****
+@app.route("/edit_order", methods=["POST"])
+def edit_order():
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        return jsonify({"error": "Access restricted to admins."}), 403
+
+    data = request.get_json()
+    order_id = data.get("order_id")
+    # Get all editable fields (all except order_id)
+    description = data.get("description")
+    lines = data.get("lines")
+    quantity = data.get("quantity")
+    clinic_name = data.get("clinic_name")
+    clinic_address = data.get("clinic_address")
+    finalized_time = data.get("finalized_time")
+    finalized_by = data.get("finalized_by")
+    carrier = data.get("carrier")
+    category = data.get("category")
+    status = data.get("status")
+    allocated_to = data.get("allocated_to")
+    order_confirmed = data.get("order_confirmed")
+
+    conn = get_db_connection()
+    conn.execute("""
+        UPDATE orders SET
+            description = ?,
+            lines = ?,
+            quantity = ?,
+            clinic_name = ?,
+            clinic_address = ?,
+            finalized_time = ?,
+            finalized_by = ?,
+            carrier = ?,
+            category = ?,
+            status = ?,
+            allocated_to = ?,
+            order_confirmed = ?
+        WHERE order_id = ?
+    """, (description, lines, quantity, clinic_name, clinic_address, finalized_time,
+          finalized_by, carrier, category, status, allocated_to, order_confirmed, order_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "Order updated successfully!"})
+
+
+# ***** DELETE ORDER (AJAX endpoint) *****
+@app.route("/delete_order/<int:order_id>", methods=["POST"])
+def delete_order(order_id):
+    if "user_id" not in session or session.get("user_role") != "Admin":
+        return jsonify({"error": "Access restricted to admins."}), 403
+
+    conn = get_db_connection()
+    conn.execute("DELETE FROM orders WHERE order_id = ?", (order_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
 
 
 #endregion
@@ -1169,16 +1277,24 @@ def submit_order():
     # Ensure the category matches the customer's clinic_category
     category = clinic_category
 
-    # Insert the order with correct category, status, and default order_confirmed
+    description = data.get('description', '')
+
+
+    # Determine order status based on the urgent flag (if urgent, override default status)
+    is_urgent = data.get('urgent', False)
+    order_status = "urgent" if is_urgent else "new"
+
+    # Insert the order with the appropriate status
     cursor.execute("""
         INSERT INTO orders (
-            clinic_name, clinic_address, category, status, quantity, lines, finalized_time, order_confirmed, carrier
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            clinic_name, clinic_address, description, category, status, quantity, lines, finalized_time, order_confirmed, carrier
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         clinic_name,
         clinic_address,
+        description,
         category,  # Use the clinic's category
-        "new",  # Set status to "new"
+        order_status,  # Use "urgent" if urgent flag is true, otherwise "new"
         total_quantity,
         lines,
         datetime.now(),
@@ -1233,38 +1349,58 @@ def get_customer_details():
     return jsonify({"error": "Customer not found."}), 404
 
 
-@app.route("/edit_customer_account/<int:customer_id>", methods=["GET", "POST"])
-def edit_customer_account(customer_id):
+@app.route("/edit_customer_account", methods=["GET", "POST"])
+def edit_customer_account():
+    # Ensure a customer is logged in
+    if "customer_id" not in session:
+        flash("You need to log in as a customer to access this page.", "danger")
+        return redirect(url_for("customer_login"))
+
+    customer_id = session["customer_id"]
     conn = get_db_connection()
+
     if request.method == "POST":
-        clinic_name = request.form["clinic_name"]
-        clinic_address = request.form["clinic_address"]
-        clinic_category = request.form["clinic_category"]
-        clinic_password = request.form.get("clinic_password", "").strip()
-        preferred_carrier = request.form.get("preferred_carrier")  # Capture preferred carrier
+        # Get JSON data from the request
+        data = request.get_json()
+        clinic_name = data.get("clinic_name")
+        clinic_address = data.get("clinic_address")
+        clinic_category = data.get("clinic_category")
+        clinic_password = data.get("clinic_password", "").strip()
+        preferred_carrier = data.get("preferred_carrier")
+        priority_customer = data.get("priority_customer", False)
 
         if clinic_password:
             hashed_password = generate_password_hash(clinic_password)
             conn.execute("""
                 UPDATE customer_account
-                SET clinic_name = ?, clinic_address = ?, clinic_category = ?, clinic_password = ?, preferred_carrier = ?
+                SET clinic_name = ?, clinic_address = ?, clinic_category = ?, clinic_password = ?,
+                    preferred_carrier = ?, priority_customer = ?
                 WHERE id = ?
-            """, (clinic_name, clinic_address, clinic_category, hashed_password, preferred_carrier, customer_id))
+            """, (clinic_name, clinic_address, clinic_category, hashed_password,
+                  preferred_carrier, int(priority_customer), customer_id))
         else:
             conn.execute("""
                 UPDATE customer_account
-                SET clinic_name = ?, clinic_address = ?, clinic_category = ?, preferred_carrier = ?
+                SET clinic_name = ?, clinic_address = ?, clinic_category = ?,
+                    preferred_carrier = ?, priority_customer = ?
                 WHERE id = ?
-            """, (clinic_name, clinic_address, clinic_category, preferred_carrier, customer_id))
+            """, (clinic_name, clinic_address, clinic_category, preferred_carrier, int(priority_customer), customer_id))
         conn.commit()
-        flash("Customer account updated successfully!", "success")
-        return redirect(url_for("customers"))
+        conn.close()
+        return jsonify({"message": "Customer account updated successfully!"})
 
-    customer = conn.execute("SELECT * FROM customer_account WHERE id = ?", (customer_id,)).fetchone()
-    carriers = conn.execute("SELECT name FROM carriers").fetchall()  # Fetch carriers
-    conn.close()
-
-    return render_template("edit_customer_account.html", customer=customer, carriers=carriers)
+    else:
+        customer_row = conn.execute("SELECT * FROM customer_account WHERE id = ?", (customer_id,)).fetchone()
+        if not customer_row:
+            conn.close()
+            flash("Customer not found.", "danger")
+            return redirect(url_for("customer_menu"))
+        customer = dict(customer_row)
+        # Convert each carrier (Row object) into a dictionary
+        carriers = [dict(row) for row in conn.execute("SELECT id, name FROM carriers").fetchall()]
+        print("DEBUG: Found", len(carriers), "carriers")
+        conn.close()
+        return render_template("edit_customer_account.html", customer=customer, carriers=carriers)
 
 
 @app.route('/update_order_status', methods=['POST'])
@@ -1420,19 +1556,24 @@ def confirm_order_status():
         return jsonify({"error": "Invalid confirmation status."}), 400
 
     conn = get_db_connection()
+    # Query for the admin's username using the current user ID
+    admin = conn.execute("SELECT username FROM users WHERE id = ?", (session.get("user_id"),)).fetchone()
+    finalized_by = admin["username"] if admin else "Unknown"
+
     try:
-        # Update the order's confirmation status and finalized_by field
+        # Update the order's confirmation status and set finalized_by to the admin's username
         conn.execute("""
             UPDATE orders
             SET order_confirmed = ?, finalized_by = ?
             WHERE order_id = ?
-        """, (new_confirmation_status, session.get("user_id"), order_id))
+        """, (new_confirmation_status, finalized_by, order_id))
         conn.commit()
         return jsonify({"message": f"Order {order_id} has been {new_confirmation_status.lower()}."})
     except sqlite3.Error as e:
         return jsonify({"error": f"Database error: {str(e)}"}), 500
     finally:
         conn.close()
+
 
 
 #endregion

@@ -1,46 +1,46 @@
 CREATE TABLE IF NOT EXISTS orders (
-    order_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    description TEXT,
-    lines INTEGER,
-    quantity INTEGER,
-    clinic_name TEXT,
-    clinic_address TEXT,
-    finalized_time DATETIME,
-    finalized_by TEXT,
-    carrier TEXT,
+    order_id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    description TEXT, /* description of the order */
+    lines INTEGER, /* the amount of different types of products in the order */
+    quantity INTEGER, /* the total amount of things in the order */
+    clinic_name TEXT, /* name of the vet clinic */
+    clinic_address TEXT, /* address of the vet clinic */
+    finalized_time DATETIME, /* time the order was confirmed by admin */
+    finalized_by TEXT, /* username of the admin that cofirmed the order */
+    carrier TEXT, /* the carrier that the customer selected as prefered carrier */
     category TEXT DEFAULT 'unallocated', -- unallocated, misc, on_hold, pick-ups, allocated
-    status TEXT DEFAULT 'new', -- new, old, urgent, priority
-    allocated_to INTEGER,
-    order_confirmed TEXT CHECK(order_confirmed IN ('Pending', 'Confirmed', 'Rejected')) DEFAULT 'Pending'
+    status TEXT DEFAULT 'new', /* status of order being new, old, or urgent */
+    allocated_to INTEGER, /* not currently used */
+    order_confirmed TEXT CHECK(order_confirmed IN ('Pending', 'Confirmed', 'Rejected')) DEFAULT 'Pending' /* whether the order hasn't been confirmed, has been, or has been rejected */
 );
 
 
 
 CREATE TABLE IF NOT EXISTS order_items (
-    item_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    order_id INTEGER,
-    item_name TEXT,
-    quantity INTEGER,
-    FOREIGN KEY (order_id) REFERENCES orders (order_id)
+    item_id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    order_id INTEGER, /* foreign key for order_id*/
+    item_name TEXT, /* name of item in order*/
+    quantity INTEGER, /* quantity of item*/
+    FOREIGN KEY (order_id) REFERENCES orders (order_id) /* */
 );
 
 CREATE TABLE IF NOT EXISTS carriers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    name TEXT UNIQUE NOT NULL /* name of carrier*/
 );
 
 
 
 
 CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'Storeworker',
-    full_name TEXT
+    id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    username TEXT NOT NULL UNIQUE, /* username */
+    password_hash TEXT NOT NULL, /* password */
+    role TEXT NOT NULL DEFAULT 'Storeworker', /* role (Storeworker by default, or Supervisor or Admin */
+    full_name TEXT /* full name of user*/
 );
 
-CREATE TABLE IF NOT EXISTS customers (
+CREATE TABLE IF NOT EXISTS customers ( /* TABLE NOT USED ANYMORE */
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     address TEXT NOT NULL,
@@ -48,34 +48,34 @@ CREATE TABLE IF NOT EXISTS customers (
 );
 
 CREATE TABLE IF NOT EXISTS products (
-    product_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_name TEXT NOT NULL,
-    product_weight REAL NOT NULL,
-    weight_type TEXT CHECK(products.weight_type IN ('g', 'Kg', 'mL', 'L')) NOT NULL,
-    supplier TEXT NOT NULL,
-    price REAL NOT NULL
+    product_id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    product_name TEXT NOT NULL, /* name of product */
+    product_weight REAL NOT NULL, /* product weight */
+    weight_type TEXT CHECK(products.weight_type IN ('g', 'Kg', 'mL', 'L')) NOT NULL, /* product weight type */
+    supplier TEXT NOT NULL, /* supplier name */
+    price REAL NOT NULL /* price of product */
 );
 
 
 -- TEST RECORDS --
 
 CREATE TABLE IF NOT EXISTS test_records (
-    record_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    record_name TEXT NOT NULL,
-    description TEXT NOT NULL,
-    category TEXT NOT NULL,
-    status TEXT NOT NULL
+    record_id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    record_name TEXT NOT NULL, /* */
+    description TEXT NOT NULL, /* */
+    category TEXT NOT NULL, /* */
+    status TEXT NOT NULL /* */
 );
 
 CREATE TABLE IF NOT EXISTS customer_account (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    clinic_name TEXT NOT NULL,
-    clinic_address TEXT NOT NULL,
-    clinic_username TEXT UNIQUE NOT NULL,
-    clinic_password TEXT NOT NULL,
-    clinic_category TEXT NOT NULL,
-    priority_customer BOOLEAN DEFAULT 0,
-    preferred_carrier TEXT
+    id INTEGER PRIMARY KEY AUTOINCREMENT, /* auto generated order-id*/
+    clinic_name TEXT NOT NULL, /* clinic name */
+    clinic_address TEXT NOT NULL, /* clinic address */
+    clinic_username TEXT UNIQUE NOT NULL, /* clinic login username */
+    clinic_password TEXT NOT NULL, /* clinic login password */
+    clinic_category TEXT NOT NULL, /* clinic prefered category eg 9:30, van etc. */
+    priority_customer BOOLEAN DEFAULT 0, /* whether they are priotity customer */
+    preferred_carrier TEXT DEFAULT 'NZC'/* prefered carrier*/
 );
 
 
@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS customer_account (
 
 
 CREATE TABLE IF NOT EXISTS product_stock (
-    product_id INTEGER PRIMARY KEY,
+    product_id INTEGER PRIMARY KEY, /* auto generated order-id*/
     total_quantity INTEGER NOT NULL,
     primary_quantity INTEGER NOT NULL,
     stock_location TEXT NOT NULL UNIQUE ,

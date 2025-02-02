@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Order Records</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <style>
+    /* Table container and modal styles */
+    .table-container {
+      max-height: 650px;
+      overflow-y: auto;
+      margin-top: 20px;
+      transition: opacity 0.3s ease;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1050;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+      padding-top: 60px;
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 5% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+    }
+    .close-btn {
+      color: #aaa;
+      font-size: 28px;
+      font-weight: bold;
+      float: right;
+      cursor: pointer;
+    }
+    .close-btn:hover, .close-btn:focus {
+      color: black;
+    }
+    .delete-btn {
+      background-color: #f44336;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    .delete-btn:hover {
+      background-color: #d32f2f;
+    }
+    .actions button {
+      margin-right: 5px;
+    }
+    .filter-bar select, .filter-bar input[type="text"] {
+      padding: 5px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  {% include 'menu.html' %}
+  <header>
+    <h1>Manage Order Records</h1>
+  </header>
+  <div class="container">
+    <div class="filter-bar" style="margin-bottom: 10px;">
+      <form action="{{ url_for('order_records') }}" method="GET" style="display: flex; gap: 10px; align-items: center;">
+        <select name="search_field">
+          <option value="">Select Field</option>
+          <option value="description" {% if search_field == 'description' %}selected{% endif %}>Description</option>
+          <option value="lines" {% if search_field == 'lines' %}selected{% endif %}>Lines</option>
+          <option value="quantity" {% if search_field == 'quantity' %}selected{% endif %}>Quantity</option>
+          <option value="clinic_name" {% if search_field == 'clinic_name' %}selected{% endif %}>Clinic Name</option>
+          <option value="clinic_address" {% if search_field == 'clinic_address' %}selected{% endif %}>Clinic Address</option>
+          <option value="finalized_time" {% if search_field == 'finalized_time' %}selected{% endif %}>Finalized Time</option>
+          <option value="finalized_by" {% if search_field == 'finalized_by' %}selected{% endif %}>Finalized By</option>
+          <option value="carrier" {% if search_field == 'carrier' %}selected{% endif %}>Carrier</option>
+          <option value="category" {% if search_field == 'category' %}selected{% endif %}>Category</option>
+          <option value="status" {% if search_field == 'status' %}selected{% endif %}>Status</option>
+          <option value="allocated_to" {% if search_field == 'allocated_to' %}selected{% endif %}>Allocated To</option>
+          <option value="order_confirmed" {% if search_field == 'order_confirmed' %}selected{% endif %}>Order Confirmed</option>
+        </select>
+        <input type="text" name="search_value" placeholder="Search..." value="{{ search_value }}">
+        <button type="submit" class="button">Search</button>
+      </form>
+    </div>
+    <div class="record-counter">
+      Showing {{ filtered_count }} of {{ total_records }} records
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Description</th>
+            <th>Lines</th>
+            <th>Quantity</th>
+            <th>Clinic Name</th>
+            <th>Clinic Address</th>
+            <th>Finalized Time</th>
+            <th>Finalized By</th>
+            <th>Carrier</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Allocated To</th>
+            <th>Order Confirmed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if orders %}
+            {% for order in orders %}
+              <tr>
+                <td>{{ order.order_id }}</td>
+                <td>{{ order.description }}</td>
+                <td>{{ order.lines }}</td>
+                <td>{{ order.quantity }}</td>
+                <td>{{ order.clinic_name }}</td>
+                <td>{{ order.clinic_address }}</td>
+                <td>{{ order.finalized_time }}</td>
+                <td>{{ order.finalized_by }}</td>
+                <td>{{ order.carrier }}</td>
+                <td>{{ order.category }}</td>
+                <td>{{ order.status }}</td>
+                <td>{{ order.allocated_to }}</td>
+                <td>{{ order.order_confirmed }}</td>
+                <td class="actions">
+                  <button class="edit-btn"
+                          data-order-id="{{ order.order_id }}"
+                          data-description="{{ order.description }}"
+                          data-lines="{{ order.lines }}"
+                          data-quantity="{{ order.quantity }}"
+                          data-clinic-name="{{ order.clinic_name }}"
+                          data-clinic-address="{{ order.clinic_address }}"
+                          data-finalized-time="{{ order.finalized_time }}"
+                          data-finalized-by="{{ order.finalized_by }}"
+                          data-carrier="{{ order.carrier }}"
+                          data-category="{{ order.category }}"
+                          data-status="{{ order.status }}"
+                          data-allocated-to="{{ order.allocated_to }}"
+                          data-order-confirmed="{{ order.order_confirmed }}">
+                    Edit
+                  </button>
+                  <button class="delete-btn" data-order-id="{{ order.order_id }}">Delete</button>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr><td colspan="14">No records found.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Edit Order Modal -->
+  <div id="editOrderModal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" id="closeEditOrderModal">&times;</span>
+      <h2>Edit Order</h2>
+      <form id="editOrderForm">
+        <input type="hidden" id="editOrderId" name="order_id">
+        <label for="editDescription">Description:</label>
+        <textarea id="editDescription" name="description" required></textarea><br><br>
+        <label for="editLines">Lines:</label>
+        <input type="number" id="editLines" name="lines" required><br><br>
+        <label for="editQuantity">Quantity:</label>
+        <input type="number" id="editQuantity" name="quantity" required><br><br>
+        <label for="editClinicName">Clinic Name:</label>
+        <input type="text" id="editClinicName" name="clinic_name" required><br><br>
+        <label for="editClinicAddress">Clinic Address:</label>
+        <input type="text" id="editClinicAddress" name="clinic_address" required><br><br>
+        <label for="editFinalizedTime">Finalized Time:</label>
+        <input type="text" id="editFinalizedTime" name="finalized_time"><br><br>
+        <label for="editFinalizedBy">Finalized By:</label>
+        <input type="text" id="editFinalizedBy" name="finalized_by"><br><br>
+        <label for="editCarrier">Carrier:</label>
+        <input type="text" id="editCarrier" name="carrier" required><br><br>
+        <label for="editCategory">Category:</label>
+        <input type="text" id="editCategory" name="category" required><br><br>
+        <label for="editStatus">Status:</label>
+        <input type="text" id="editStatus" name="status" required><br><br>
+        <label for="editAllocatedTo">Allocated To:</label>
+        <input type="text" id="editAllocatedTo" name="allocated_to"><br><br>
+        <label for="editOrderConfirmed">Order Confirmed:</label>
+        <input type="text" id="editOrderConfirmed" name="order_confirmed" required><br><br>
+        <button type="submit" class="button">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // --- Edit Order Modal Handling ---
+    const editOrderModal = document.getElementById('editOrderModal');
+    const editOrderButtons = document.querySelectorAll('.edit-btn');
+
+    editOrderButtons.forEach(button => {
+      button.addEventListener('click', (event) => {
+        // Populate the edit modal fields using the data attributes
+        document.getElementById('editOrderId').value = button.getAttribute('data-order-id');
+        document.getElementById('editDescription').value = button.getAttribute('data-description');
+        document.getElementById('editLines').value = button.getAttribute('data-lines');
+        document.getElementById('editQuantity').value = button.getAttribute('data-quantity');
+        document.getElementById('editClinicName').value = button.getAttribute('data-clinic-name');
+        document.getElementById('editClinicAddress').value = button.getAttribute('data-clinic-address');
+        document.getElementById('editFinalizedTime').value = button.getAttribute('data-finalized-time');
+        document.getElementById('editFinalizedBy').value = button.getAttribute('data-finalized-by');
+        document.getElementById('editCarrier').value = button.getAttribute('data-carrier');
+        document.getElementById('editCategory').value = button.getAttribute('data-category');
+        document.getElementById('editStatus').value = button.getAttribute('data-status');
+        document.getElementById('editAllocatedTo').value = button.getAttribute('data-allocated-to');
+        document.getElementById('editOrderConfirmed').value = button.getAttribute('data-order-confirmed');
+
+        editOrderModal.style.display = 'block';
+      });
+    });
+
+    const closeEditOrderBtn = document.getElementById("closeEditOrderModal");
+    closeEditOrderBtn.addEventListener('click', () => {
+      editOrderModal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+      if (event.target === editOrderModal) {
+        editOrderModal.style.display = 'none';
+      }
+    });
+
+    // Form submission for editing an order
+    document.getElementById('editOrderForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+      const formData = new FormData(this);
+      const orderData = {};
+      formData.forEach((value, key) => {
+        orderData[key] = value;
+      });
+      fetch('/edit_order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) {
+          alert(data.message);
+          editOrderModal.style.display = 'none';
+          window.location.reload();
+        } else {
+          alert(data.error || 'Failed to update order.');
+        }
+      })
+      .catch(error => console.error('Error updating order:', error));
+    });
+
+    // Handle Delete Order
+    const deleteOrderButtons = document.querySelectorAll('.delete-btn');
+    deleteOrderButtons.forEach(button => {
+      button.addEventListener('click', (event) => {
+        const orderId = button.getAttribute('data-order-id');
+        if (confirm('Are you sure you want to delete this order?')) {
+          fetch(`/delete_order/${orderId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order_id: orderId })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Order deleted successfully!');
+              window.location.reload();
+            } else {
+              alert('Failed to delete order.');
+            }
+          })
+          .catch(error => console.error('Error deleting order:', error));
+        }
+      });
+    });
+  </script>
+  <script src="/static/scripts.js"></script>
+</body>
+</html>
